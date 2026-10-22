@@ -1,0 +1,6 @@
+{
+  "name": "AutoQA Studio - Autonomous Test Orchestration Platform",
+  "description": "Autonomous QA platform that analyzes websites, Git repositories, and specs to design, review, execute Playwright-ready test suites, triage failures, and export test reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
