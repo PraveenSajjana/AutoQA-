@@ -484,7 +484,7 @@ export const CodePastingWorkspace: React.FC<CodePastingWorkspaceProps> = ({
 
   const handleDeleteFile = (idToDelete: string) => {
     if (files.length <= 1) {
-      alert('You must have at least one file in your codebase.');
+      setZipError('You must retain at least one file in your codebase workspace.');
       return;
     }
     const remaining = files.filter((f) => f.id !== idToDelete);

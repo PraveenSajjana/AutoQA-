@@ -8,72 +8,200 @@ import {
   TestResult, 
   StepExecutionRecord, 
   QASummaryReport,
-  DefectTriage
+  DefectTriage,
+  AppNavigationSection,
+  NotificationItem,
+  TraceabilityRequirement,
+  DefectStatus,
+  DefectClassification
 } from './types/qa';
 import { SAMPLE_APPS } from './services/sampleApps';
-import { Header } from './components/Header';
-import { WorkflowStepper } from './components/WorkflowStepper';
-import { ProjectOnboarding } from './components/ProjectOnboarding';
-import { AppAnalysisView } from './components/AppAnalysisView';
+import { INITIAL_DEFECTS, INITIAL_TRACEABILITY_REQUIREMENTS } from './services/defectAndTraceabilityData';
+import { Sidebar } from './components/Sidebar';
+import { TopNav } from './components/TopNav';
+import { DashboardOverview } from './components/DashboardOverview';
+import { ProjectsView } from './components/ProjectsView';
 import { TestCaseManager } from './components/TestCaseManager';
 import { ExecutionConsole } from './components/ExecutionConsole';
+import { DefectInvestigationView } from './components/DefectInvestigationView';
+import { RequirementTraceabilityView } from './components/RequirementTraceabilityView';
 import { ReportExporter } from './components/ReportExporter';
+import { AgentActivityView } from './components/AgentActivityView';
+import { IntegrationsView } from './components/IntegrationsView';
+import { SettingsView } from './components/SettingsView';
+import { GlobalSearchModal } from './components/GlobalSearchModal';
+import { ProjectOnboarding } from './components/ProjectOnboarding';
 import { LiveBrowserSandbox } from './components/LiveBrowserSandbox';
 import { RequirementsAnalyzerModal } from './components/RequirementsAnalyzerModal';
 import { CompletePdfModal } from './components/CompletePdfModal';
 import { ToastContainer, ToastMessage } from './components/Toast';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
-import { Sparkles, Eye, EyeOff, Terminal, Bug } from 'lucide-react';
+import { HowItWorksModal } from './components/HowItWorksModal';
+import { WorkflowShell, WorkflowStepId } from './components/workflow/WorkflowShell';
+import { 
+  loadStoredProjects, 
+  saveStoredProjects, 
+  loadActiveProjectId, 
+  saveActiveProjectId, 
+  loadProjectSession, 
+  saveProjectSession, 
+  removeProjectFromStorage,
+  getDefaultProjects,
+  syncProjectToBackend
+} from './services/storage';
+import { Eye, EyeOff, X } from 'lucide-react';
 
 export default function App() {
-  // Pre-loaded projects from sample apps
-  const initialProjects: Project[] = SAMPLE_APPS.map((sa) => ({
-    id: sa.id,
-    name: sa.name,
-    inputType: 'sandbox_app',
-    targetUrl: sa.url,
-    createdAt: new Date().toISOString(),
-    status: 'tests_generated',
-    sampleAppId: sa.id,
-  }));
+  // Navigation Section State (default to 'workflow' for end-to-end journey)
+  const [currentSection, setCurrentSection] = useState<AppNavigationSection>('workflow');
+  const [workflowStep, setWorkflowStep] = useState<WorkflowStepId>('new_project');
 
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
-  const [currentProject, setCurrentProject] = useState<Project>(initialProjects[0]);
-  const [currentStage, setCurrentStage] = useState<number>(1);
-  const [completedStages, setCompletedStages] = useState<number[]>([1, 2, 3]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('qa_agent_sidebar_collapsed') === 'true';
+  });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
-  // QA Data state
-  const [analysis, setAnalysis] = useState<ApplicationAnalysis | null>(SAMPLE_APPS[0].analysis);
-  const [testCases, setTestCases] = useState<TestCase[]>(SAMPLE_APPS[0].seededTestCases);
-  const [reviewFeedbacks, setReviewFeedbacks] = useState<Record<string, TestReviewFeedback>>({
-    'ECOM-001': {
-      testId: 'ECOM-001',
-      verdict: 'approved',
-      score: 98,
-      notes: ['Valid full purchase journey', 'Deterministic assertions in place', 'Low selector drift probability'],
-      selectorStabilityScore: 'high',
-      assertionRigor: 'strong',
-    },
-    'ECOM-002': {
-      testId: 'ECOM-002',
-      verdict: 'approved',
-      score: 94,
-      notes: ['Financial discount math verified', 'Coupon input target exists in DOM'],
-      selectorStabilityScore: 'high',
-      assertionRigor: 'strong',
-    },
-    'ECOM-003': {
-      testId: 'ECOM-003',
-      verdict: 'approved',
-      score: 92,
-      notes: ['Negative validation barrier covered', 'Protects against empty payload submissions'],
-      selectorStabilityScore: 'high',
-      assertionRigor: 'strong',
-    },
+  // Theme State (Dark by default, with light option)
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const stored = localStorage.getItem('qa_theme');
+    return stored ? stored === 'dark' : true;
   });
 
-  const [currentRun, setCurrentRun] = useState<TestRun | null>(null);
-  const [summaryReport, setSummaryReport] = useState<QASummaryReport | null>(null);
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('qa_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+      localStorage.setItem('qa_theme', 'light');
+    }
+  }, [isDarkMode]);
+
+  const toggleTheme = () => setIsDarkMode((prev) => !prev);
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('qa_agent_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
+
+  // Projects state
+  const [projects, setProjects] = useState<Project[]>(() => loadStoredProjects());
+  const [currentProject, setCurrentProject] = useState<Project>(() => {
+    const storedList = loadStoredProjects();
+    const activeId = loadActiveProjectId();
+    const matched = storedList.find((p) => p.id === activeId);
+    return matched || storedList[0] || getDefaultProjects()[0];
+  });
+
+  // Session data for current project
+  const initialSession = loadProjectSession(currentProject.id);
+
+  // QA Data state
+  const [analysis, setAnalysis] = useState<ApplicationAnalysis | null>(
+    initialSession?.analysis ?? (SAMPLE_APPS[0].analysis)
+  );
+  const [testCases, setTestCases] = useState<TestCase[]>(
+    initialSession?.testCases ?? (SAMPLE_APPS[0].seededTestCases)
+  );
+  const [reviewFeedbacks, setReviewFeedbacks] = useState<Record<string, TestReviewFeedback>>(
+    initialSession?.reviewFeedbacks ?? {
+      'ECOM-001': {
+        testId: 'ECOM-001',
+        verdict: 'approved',
+        score: 98,
+        notes: ['Valid full purchase journey', 'Deterministic assertions in place', 'Low selector drift probability'],
+        selectorStabilityScore: 'high',
+        assertionRigor: 'strong',
+      },
+      'ECOM-002': {
+        testId: 'ECOM-002',
+        verdict: 'approved',
+        score: 94,
+        notes: ['Financial discount math verified', 'Coupon input target exists in DOM'],
+        selectorStabilityScore: 'high',
+        assertionRigor: 'strong',
+      },
+      'ECOM-003': {
+        testId: 'ECOM-003',
+        verdict: 'approved',
+        score: 92,
+        notes: ['Negative validation barrier covered', 'Protects against empty payload submissions'],
+        selectorStabilityScore: 'high',
+        assertionRigor: 'strong',
+      },
+    }
+  );
+
+  const [currentRun, setCurrentRun] = useState<TestRun | null>(initialSession?.currentRun ?? null);
+  const [summaryReport, setSummaryReport] = useState<QASummaryReport | null>(initialSession?.summaryReport ?? null);
+
+  // Defects and Traceability Requirements
+  const [defects, setDefects] = useState<DefectTriage[]>(() => {
+    const stored = localStorage.getItem('qa_agent_defects');
+    if (stored) {
+      try { return JSON.parse(stored); } catch (e) { /* ignore */ }
+    }
+    return INITIAL_DEFECTS;
+  });
+
+  const [requirements, setRequirements] = useState<TraceabilityRequirement[]>(() => {
+    const stored = localStorage.getItem('qa_agent_requirements');
+    if (stored) {
+      try { return JSON.parse(stored); } catch (e) { /* ignore */ }
+    }
+    return INITIAL_TRACEABILITY_REQUIREMENTS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('qa_agent_defects', JSON.stringify(defects));
+  }, [defects]);
+
+  useEffect(() => {
+    localStorage.setItem('qa_agent_requirements', JSON.stringify(requirements));
+  }, [requirements]);
+
+  // Notifications
+  const [notifications, setNotifications] = useState<NotificationItem[]>([
+    {
+      id: 'notif-1',
+      type: 'warning',
+      title: 'Defect Flagged: DEF-104',
+      message: 'Cart total promo discount assertion mismatch in NovaShop.',
+      timestamp: '10m ago',
+      read: false,
+      linkSection: 'defects',
+    },
+    {
+      id: 'notif-2',
+      type: 'info',
+      title: 'Coverage Gap Detected',
+      message: 'REQ-ECOM-04 (Inventory Reservation) has no linked automated test cases.',
+      timestamp: '25m ago',
+      read: false,
+      linkSection: 'requirements',
+    },
+    {
+      id: 'notif-3',
+      type: 'success',
+      title: 'Playwright Sandbox Active',
+      message: 'Headless Chromium instance running with DOM actionability checks.',
+      timestamp: '1h ago',
+      read: true,
+      linkSection: 'workflow',
+    },
+  ]);
+
+  const handleDismissNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const handleMarkAllNotificationsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
 
   // Loading flags
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
@@ -81,26 +209,25 @@ export default function App() {
   const [isReviewing, setIsReviewing] = useState<boolean>(false);
   const [isRunningSuite, setIsRunningSuite] = useState<boolean>(false);
 
+  // Modals
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+  const [isRequirementsModalOpen, setIsRequirementsModalOpen] = useState<boolean>(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
+  const [isHowItWorksOpen, setIsHowItWorksOpen] = useState<boolean>(false);
+
   // Live sandbox visual overlay
   const [showSandboxPreview, setShowSandboxPreview] = useState<boolean>(true);
   const [highlightedSelector, setHighlightedSelector] = useState<string>('');
 
-  // AI Requirements & User Story modal state
-  const [isRequirementsModalOpen, setIsRequirementsModalOpen] = useState<boolean>(false);
-
-  // Complete Application PDF modal state
-  const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
-
-  // Keyboard Shortcuts cheat sheet modal state
-  const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
-
-  // Non-intrusive floating toasts
+  // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([
     {
       id: 'init-toast',
       type: 'info',
-      title: 'AutoQA Studio Ready',
-      description: 'Press [?] for keyboard shortcuts or [R] to run suite',
+      title: 'QA-Agent End-to-End Ready',
+      description: '4-step testing workflow active: New Project → Analysis → Review → Execution',
       duration: 5000,
     },
   ]);
@@ -114,10 +241,9 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Global Keyboard Navigation Shortcuts
+  // Keyboard Navigation Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept when user is typing in form controls
       const target = e.target as HTMLElement | null;
       if (
         target &&
@@ -126,9 +252,13 @@ export default function App() {
           target.tagName === 'SELECT' ||
           target.isContentEditable)
       ) {
-        if (e.key === 'Escape') {
-          target.blur();
-        }
+        if (e.key === 'Escape') target.blur();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
         return;
       }
 
@@ -136,6 +266,9 @@ export default function App() {
         setIsShortcutsOpen(false);
         setIsRequirementsModalOpen(false);
         setIsPdfModalOpen(false);
+        setIsSearchOpen(false);
+        setIsOnboardingOpen(false);
+        setIsHowItWorksOpen(false);
         return;
       }
 
@@ -146,87 +279,152 @@ export default function App() {
       }
 
       if (e.key === '1') {
-        setCurrentStage(1);
-        addToast('info', 'Phase 01: Onboarding', 'Target ingestion and repository configuration');
+        setCurrentSection('workflow');
+        setWorkflowStep('new_project');
       } else if (e.key === '2') {
-        setCurrentStage(2);
-        addToast('info', 'Phase 02: Route Analysis', 'Application routes and DOM map');
+        setCurrentSection('workflow');
+        setWorkflowStep('analysis');
       } else if (e.key === '3') {
-        setCurrentStage(3);
-        addToast('info', 'Phase 03: Test Designer', 'Deterministic JSON test cases');
+        setCurrentSection('workflow');
+        setWorkflowStep('test_cases');
       } else if (e.key === '4') {
-        setCurrentStage(4);
-        addToast('info', 'Phase 04: Review Gate', 'QA signoff and assertion audits');
+        setCurrentSection('workflow');
+        setWorkflowStep('execution');
       } else if (e.key === '5') {
-        setCurrentStage(5);
-        addToast('info', 'Phase 05: Execution Engine', 'Playwright run and step traces');
-      } else if (e.key === '6') {
-        setCurrentStage(6);
-        addToast('info', 'Phase 06: Signoff & Exports', 'ISO 29148 BRD & Complete QA PDF');
-      } else if (e.key === 'r' || e.key === 'R') {
-        if (!isRunningSuite) {
-          handleRunFullPipeline();
-        }
-      } else if (e.key === 'p' || e.key === 'P') {
-        setIsPdfModalOpen((prev) => !prev);
-      } else if (e.key === 'a' || e.key === 'A') {
-        setIsRequirementsModalOpen((prev) => !prev);
+        setCurrentSection('overview');
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isRunningSuite]);
+  }, []);
 
-  const handleImportGeneratedTests = (newCases: TestCase[], summary?: string) => {
-    setTestCases(newCases);
-    setCurrentStage(3); // Navigate to Test Designer & Review Gate
-    setCompletedStages((prev) => Array.from(new Set([...prev, 1, 2, 3])));
-    addToast('success', 'Requirements Imported', `Generated ${newCases.length} deterministic test cases`);
-
-    // Pre-calculate review gate status for newly generated cases
-    const initialFeedbacks: Record<string, TestReviewFeedback> = {};
-    newCases.forEach((tc) => {
-      const hasAssertion = tc.steps.some((s) => s.action.startsWith('assert_'));
-      initialFeedbacks[tc.test_id] = {
-        testId: tc.test_id,
-        verdict: 'needs_revision',
-        score: hasAssertion ? 92 : 68,
-        notes: [
-          `Derived from requirement: '${tc.requirement_id}'`,
-          `Preconditions: ${tc.preconditions.join('; ') || 'None specified'}`,
-          'Awaiting QA engineer inspection and signoff before Playwright execution'
-        ],
-        selectorStabilityScore: 'high',
-        assertionRigor: hasAssertion ? 'strong' : 'acceptable',
-      };
+  // Auto-persist active project session
+  useEffect(() => {
+    if (!currentProject?.id) return;
+    saveProjectSession(currentProject.id, {
+      analysis,
+      testCases,
+      reviewFeedbacks,
+      currentRun,
+      summaryReport,
+      currentStage: 3,
+      completedStages: [1, 2, 3, 4, 5],
     });
-    setReviewFeedbacks(initialFeedbacks);
-  };
+    saveActiveProjectId(currentProject.id);
+  }, [
+    currentProject?.id,
+    analysis,
+    testCases,
+    reviewFeedbacks,
+    currentRun,
+    summaryReport,
+  ]);
 
-  // When project changes, update analysis and test cases
+  // Auto-persist projects list
+  useEffect(() => {
+    if (projects.length > 0) {
+      saveStoredProjects(projects);
+      syncProjectToBackend(currentProject, {
+        analysis,
+        testCases,
+        reviewFeedbacks,
+        currentRun,
+        summaryReport,
+        currentStage: 3,
+        completedStages: [1, 2, 3, 4, 5],
+      });
+    }
+  }, [projects, currentProject]);
+
+  // Project selection handler (reopen project without losing data)
   const handleSelectProject = (project: Project) => {
+    if (currentProject && currentProject.id !== project.id) {
+      saveProjectSession(currentProject.id, {
+        analysis,
+        testCases,
+        reviewFeedbacks,
+        currentRun,
+        summaryReport,
+        currentStage: 3,
+        completedStages: [1, 2, 3, 4, 5],
+      });
+    }
+
     setCurrentProject(project);
-    const sample = SAMPLE_APPS.find((s) => s.id === project.sampleAppId);
-    if (sample) {
-      setAnalysis(sample.analysis);
-      setTestCases(sample.seededTestCases);
-      setCurrentStage(3);
-      setCompletedStages([1, 2, 3]);
-      addToast('success', 'Target Project Loaded', `${project.name} (${sample.seededTestCases.length} tests ready)`);
+    saveActiveProjectId(project.id);
+
+    const session = loadProjectSession(project.id);
+    if (session && session.analysis) {
+      setAnalysis(session.analysis);
+      setTestCases(session.testCases || []);
+      setReviewFeedbacks(session.reviewFeedbacks || {});
+      setCurrentRun(session.currentRun || null);
+      setSummaryReport(session.summaryReport || null);
+      setWorkflowStep(session.currentRun ? 'execution' : session.testCases?.length ? 'test_cases' : 'analysis');
+      addToast('success', 'Project Reopened', `${project.name} loaded with ${session.testCases?.length || 0} tests`);
     } else {
-      setCurrentStage(1);
-      addToast('info', 'Project Selected', project.name);
+      const sample = SAMPLE_APPS.find((s) => s.id === project.sampleAppId);
+      if (sample) {
+        setAnalysis(sample.analysis);
+        setTestCases(sample.seededTestCases);
+        setWorkflowStep('analysis');
+        addToast('success', 'Target Project Loaded', `${project.name} (${sample.seededTestCases.length} tests ready)`);
+      } else {
+        setAnalysis(null);
+        setTestCases([]);
+        setReviewFeedbacks({});
+        setCurrentRun(null);
+        setSummaryReport(null);
+        setWorkflowStep('new_project');
+        addToast('info', 'Project Selected', project.name);
+      }
     }
   };
 
-  // Stage 1 -> Stage 2: Start Application Analysis (Agent 1)
+  // Delete project
+  const handleDeleteProject = (projectId: string) => {
+    const toDelete = projects.find((p) => p.id === projectId);
+    if (toDelete?.sampleAppId && projects.length <= 1) {
+      addToast('info', 'Sample Protected', 'At least one project must remain in the workspace.');
+      return;
+    }
+    const remaining = projects.filter((p) => p.id !== projectId);
+    removeProjectFromStorage(projectId);
+    setProjects(remaining);
+    const nextProject = remaining[0] || getDefaultProjects()[0];
+    handleSelectProject(nextProject);
+    addToast('success', 'Project Deleted', `Removed ${toDelete?.name || projectId} from workspace.`);
+  };
+
+  // 1-Click sample app loader
+  const handleLoadSample = (sampleId: string) => {
+    const sample = SAMPLE_APPS.find((s) => s.id === sampleId) || SAMPLE_APPS[0];
+    const newProj: Project = {
+      id: `proj-${sample.id}-${Date.now().toString().slice(-4)}`,
+      name: sample.name,
+      inputType: 'website_url',
+      targetUrl: sample.url,
+      createdAt: new Date().toISOString(),
+      status: 'tests_generated',
+      sampleAppId: sample.id,
+    };
+    setProjects((prev) => [newProj, ...prev]);
+    setCurrentProject(newProj);
+    setAnalysis(sample.analysis);
+    setTestCases(sample.seededTestCases);
+    setCurrentSection('workflow');
+    setWorkflowStep('analysis');
+    addToast('success', 'Sample Target Loaded', `${sample.name} loaded with ${sample.seededTestCases.length} tests ready.`);
+  };
+
+  // Start Analysis from Onboarding (Step 1 -> Step 2)
   const handleStartAnalysis = async (projectData: Partial<Project>) => {
     setIsAnalyzing(true);
     const newProject: Project = {
       id: `proj-${Date.now()}`,
       name: projectData.name || 'New Target Project',
-      inputType: projectData.inputType || 'pasted_code',
+      inputType: projectData.inputType || 'website_url',
       targetUrl: projectData.targetUrl,
       repositoryUrl: projectData.repositoryUrl,
       pastedFiles: projectData.pastedFiles,
@@ -247,39 +445,17 @@ export default function App() {
     setProjects((prev) => [newProject, ...prev]);
     setCurrentProject(newProject);
 
-    // If sandbox app, use pre-loaded analysis
     if (newProject.sampleAppId) {
       const sample = SAMPLE_APPS.find((s) => s.id === newProject.sampleAppId);
       if (sample) {
         setAnalysis(sample.analysis);
         setTestCases(sample.seededTestCases);
         setIsAnalyzing(false);
-        setCurrentStage(2);
-        setCompletedStages([1, 2]);
+        setIsOnboardingOpen(false);
+        setCurrentSection('workflow');
+        setWorkflowStep('analysis');
+        addToast('success', 'Project Ready', `${newProject.name} analyzed.`);
         return;
-      }
-    }
-
-    // If user uploaded requirements / user stories, run AI Requirements Analyzer directly
-    if (newProject.inputType === 'spec_upload' && newProject.specDocument) {
-      try {
-        const reqRes = await fetch('/api/qa/analyze-requirements', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            requirementsText: newProject.specDocument,
-            appName: newProject.name,
-            requestedCount: 4,
-          }),
-        });
-        const reqData = await reqRes.json();
-        if (reqData.success && reqData.result) {
-          handleImportGeneratedTests(reqData.result.testCases, reqData.result.summary);
-          setIsAnalyzing(false);
-          return;
-        }
-      } catch (specErr) {
-        console.warn('Requirements API error, falling back to general analysis:', specErr);
       }
     }
 
@@ -297,12 +473,14 @@ export default function App() {
       console.error('Analysis API error:', err);
     } finally {
       setIsAnalyzing(false);
-      setCurrentStage(2);
-      setCompletedStages((prev) => Array.from(new Set([...prev, 1, 2])));
+      setIsOnboardingOpen(false);
+      setCurrentSection('workflow');
+      setWorkflowStep('analysis');
+      addToast('success', 'Analysis Complete', 'Identified modules, routes, and risk boundary scenarios.');
     }
   };
 
-  // Stage 2 -> Stage 3: Generate Test Cases (Agent 2)
+  // Generate Test Cases (Step 2 -> Step 3)
   const handleProceedToDesign = async () => {
     if (!analysis) return;
     setIsGeneratingTests(true);
@@ -311,26 +489,30 @@ export default function App() {
       const res = await fetch('/api/qa/generate-tests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysis, requestedCount: 3 }),
+        body: JSON.stringify({ analysis, requestedCount: 4 }),
       });
       const data = await res.json();
       if (data.success && data.testCases) {
-        setTestCases(data.testCases);
+        // Pre-approve the first 2 tests as demo baseline
+        const casesWithInitialStatus = (data.testCases as TestCase[]).map((tc, idx) => ({
+          ...tc,
+          status: idx < 2 ? ('approved' as const) : ('pending_review' as const),
+        }));
+        setTestCases(casesWithInitialStatus);
+        setWorkflowStep('test_cases');
+        addToast('success', 'Test Cases Synthesized', `Generated ${data.testCases.length} Playwright test cases.`);
       }
     } catch (err) {
       console.error('Design API error:', err);
     } finally {
       setIsGeneratingTests(false);
-      setCurrentStage(3);
-      setCompletedStages((prev) => Array.from(new Set([...prev, 1, 2, 3])));
     }
   };
 
-  // Stage 3 -> Agent 3 Quality Review Gate
+  // Review Gate (Agent 3)
   const handleRunReviewGate = async () => {
     if (!testCases.length) return;
     setIsReviewing(true);
-
     try {
       const res = await fetch('/api/qa/review-tests', {
         method: 'POST',
@@ -344,22 +526,26 @@ export default function App() {
           feedbackMap[rev.testId] = rev;
         }
         setReviewFeedbacks(feedbackMap);
+        addToast('success', 'Review Gate Completed', 'Assertion stability & locator rigor scored.');
       }
     } catch (err) {
       console.error('Review API error:', err);
     } finally {
       setIsReviewing(false);
-      setCompletedStages((prev) => Array.from(new Set([...prev, 4])));
     }
   };
 
-  // Stage 4 / 5: Deterministic Execution Engine & Failure Triage (Agent 4)
+  // Execution Engine & Failure Triage (Step 4)
   const handleExecuteSuite = async (defectMode: 'none' | 'product_bug' | 'flaky_selector' | 'network_timeout' = 'none') => {
     const approved = testCases.filter((tc) => tc.status === 'approved');
-    if (!approved.length) return;
+    if (approved.length === 0) {
+      addToast('error', 'Execution Blocked', 'At least 1 test case must be approved before execution can begin.');
+      return;
+    }
 
     setIsRunningSuite(true);
-    setCurrentStage(5);
+    setCurrentSection('workflow');
+    setWorkflowStep('execution');
 
     const runId = `run-${Date.now()}`;
     const initialRun: TestRun = {
@@ -386,26 +572,22 @@ export default function App() {
     const detectedDefects: DefectTriage[] = [];
     const startTime = Date.now();
 
-    // Step through each test case deterministically
     for (let tIdx = 0; tIdx < approved.length; tIdx++) {
       const tc = approved[tIdx];
       const stepRecords: StepExecutionRecord[] = [];
       const testLogs: string[] = [
-        `[PW] Launching Playwright Chromium page for '${tc.test_id}'`,
-        `[PW] Navigating with viewport 1280x800`,
+        `[PW] Launching Playwright Chromium sandbox for '${tc.test_id}'`,
+        `[PW] Viewport configured to 1280x800, DPR: 1.0`,
       ];
       let testPassed = true;
       let failureTriage: DefectTriage | undefined = undefined;
 
-      // Determine if this test will trigger the injected defect
       const shouldFailThisTest = (defectMode !== 'none') && (tIdx === 1 || (defectMode === 'product_bug' && tc.title.includes('Promo')));
 
       for (let sIdx = 0; sIdx < tc.steps.length; sIdx++) {
         const step = tc.steps[sIdx];
         setHighlightedSelector(step.target);
-
-        // Simulated action delay for realism & visual trace inspection
-        await new Promise((r) => setTimeout(r, 280));
+        await new Promise((r) => setTimeout(r, 220));
 
         const isLastStep = sIdx === tc.steps.length - 1;
         const stepFails = shouldFailThisTest && isLastStep;
@@ -428,7 +610,6 @@ export default function App() {
 
           testLogs.push(`[PW ERROR] ${errMsg}`);
 
-          // Call Agent 4 for AI Failure Triage
           try {
             const triageRes = await fetch('/api/qa/triage-failure', {
               method: 'POST',
@@ -443,10 +624,12 @@ export default function App() {
             const triageData = await triageRes.json();
             if (triageData.success && triageData.triage) {
               failureTriage = {
-                id: `defect-${Date.now()}`,
+                id: `DEF-${Date.now().toString().slice(-4)}`,
                 testId: tc.test_id,
                 testTitle: tc.title,
                 category: triageData.triage.category,
+                classification: triageData.triage.category === 'PRODUCT_DEFECT' ? 'product_defect' : 'test_script_issue',
+                status: 'new',
                 confidence: triageData.triage.confidence,
                 severity: triageData.triage.severity,
                 rootCauseAnalysis: triageData.triage.rootCauseAnalysis,
@@ -455,8 +638,11 @@ export default function App() {
                 expectedBehavior: triageData.triage.expectedBehavior,
                 suggestedFix: triageData.triage.suggestedFix,
                 codeSnippet: triageData.triage.codeSnippet,
+                requirementId: tc.requirement_id,
+                createdAt: new Date().toISOString(),
               };
               detectedDefects.push(failureTriage);
+              setDefects((prev) => [failureTriage!, ...prev]);
             }
           } catch (tErr) {
             console.error('Triage call error:', tErr);
@@ -468,11 +654,11 @@ export default function App() {
             target: step.target,
             value: step.value,
             status: 'failed',
-            durationMs: 420,
+            durationMs: 380,
             logMessage: `[FAIL] ${step.action} on ${step.target}`,
             errorMessage: errMsg,
           });
-          break; // Stop test on failure
+          break;
         } else {
           testLogs.push(`[PW OK] Dispatched ${step.action} on '${step.target}' (${step.value || 'no-arg'})`);
           stepRecords.push({
@@ -481,7 +667,7 @@ export default function App() {
             target: step.target,
             value: step.value,
             status: 'passed',
-            durationMs: Math.floor(Math.random() * 80) + 40,
+            durationMs: Math.floor(Math.random() * 60) + 30,
             logMessage: `[PASS] ${step.action} on ${step.target}`,
           });
         }
@@ -503,7 +689,6 @@ export default function App() {
 
       executedResults.push(result);
 
-      // Incremental run update
       setCurrentRun((prev) =>
         prev
           ? {
@@ -531,22 +716,21 @@ export default function App() {
 
     setCurrentRun(completedRun);
     setIsRunningSuite(false);
-    setCompletedStages((prev) => Array.from(new Set([...prev, 5])));
+
     if (completedRun.failedCount > 0) {
       addToast(
         'error',
-        'Execution Finished with Defects',
+        'Execution Finished with Failures',
         `${completedRun.passedCount} passed, ${completedRun.failedCount} failed (${completedRun.durationMs}ms)`
       );
     } else {
       addToast(
         'success',
-        'All Tests Passed',
+        'Playwright Suite Passed',
         `${completedRun.passedCount}/${completedRun.totalTests} tests passed in ${completedRun.durationMs}ms`
       );
     }
 
-    // Call Agent 5 to generate Executive Summary Report
     try {
       const summaryRes = await fetch('/api/qa/executive-report', {
         method: 'POST',
@@ -575,146 +759,388 @@ export default function App() {
     }
   };
 
-  // Full Pipeline Execution (Chained)
-  const handleRunFullPipeline = async () => {
-    if (!analysis) {
-      await handleStartAnalysis(currentProject);
-    }
-    // Approve tests if needed
-    const approved = testCases.map((tc) => ({ ...tc, status: 'approved' as const }));
-    setTestCases(approved);
-    await handleExecuteSuite('none');
-    setCurrentStage(6);
-    setCompletedStages([1, 2, 3, 4, 5, 6]);
+  // Defect updates
+  const handleUpdateDefectStatus = (defectId: string, newStatus: DefectStatus) => {
+    setDefects((prev) =>
+      prev.map((d) => (d.id === defectId ? { ...d, status: newStatus } : d))
+    );
+    addToast('success', 'Defect Updated', `${defectId} status changed to ${newStatus}`);
+  };
+
+  const handleUpdateDefectClassification = (defectId: string, newClassification: DefectClassification) => {
+    setDefects((prev) =>
+      prev.map((d) => (d.id === defectId ? { ...d, classification: newClassification } : d))
+    );
+    addToast('success', 'Classification Updated', `${defectId} set to ${newClassification.replace('_', ' ')}`);
+  };
+
+  // Requirement to test generation
+  const handleGenerateTestForRequirement = (req: TraceabilityRequirement) => {
+    const newTestId = `AUTO-${Date.now().toString().slice(-4)}`;
+    const newTestCase: TestCase = {
+      test_id: newTestId,
+      requirement_id: req.code,
+      title: `Verify ${req.title}`,
+      module: req.module,
+      priority: req.priority,
+      preconditions: ['Target surface loaded in Playwright viewport'],
+      steps: [
+        { action: 'navigate', target: currentProject.targetUrl || 'http://localhost:3000', description: 'Open page' },
+        { action: 'assert_visible', target: '[data-testid="store-root"]', description: 'Verify container' },
+      ],
+      expected_result: req.description,
+      status: 'approved',
+      category: 'functional',
+    };
+
+    setTestCases((prev) => [newTestCase, ...prev]);
+    setRequirements((prev) =>
+      prev.map((r) => (r.id === req.id ? { ...r, status: 'covered', testCaseIds: [...r.testCaseIds, newTestId] } : r))
+    );
+    setCurrentSection('workflow');
+    setWorkflowStep('test_cases');
+    addToast('success', 'Test Case Synthesized', `Linked ${newTestId} to ${req.code}`);
+  };
+
+  // Reset demo storage
+  const handleResetAllData = () => {
+    localStorage.clear();
+    setProjects(getDefaultProjects());
+    const firstProj = getDefaultProjects()[0];
+    setCurrentProject(firstProj);
+    const sample = SAMPLE_APPS.find((s) => s.id === firstProj.sampleAppId) || SAMPLE_APPS[0];
+    setAnalysis(sample.analysis);
+    setTestCases(sample.seededTestCases);
+    setCurrentRun(null);
+    setSummaryReport(null);
+    setDefects(INITIAL_DEFECTS);
+    setRequirements(INITIAL_TRACEABILITY_REQUIREMENTS);
+    setWorkflowStep('new_project');
+  };
+
+  const openDefectsCount = defects.filter((d) => d.status !== 'fixed').length;
+
+  const handleStartNewProjectWorkflow = () => {
+    setCurrentSection('workflow');
+    setWorkflowStep('new_project');
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Platform Header */}
-      <Header
+    <div className="min-h-screen bg-[#0B1020] text-[#F1F5F9] flex flex-col md:flex-row font-sans selection:bg-[#7C5CFC]/30 selection:text-[#F1F5F9]">
+      {/* SaaS Left Sidebar */}
+      <Sidebar
+        currentSection={currentSection}
+        onSelectSection={(sec) => {
+          setCurrentSection(sec);
+          if (sec === 'test-suites') setWorkflowStep('test_cases');
+          if (sec === 'test-runs') setWorkflowStep('execution');
+        }}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={toggleSidebar}
+        onNewProject={handleStartNewProjectWorkflow}
         currentProject={currentProject}
         allProjects={projects}
         onSelectProject={handleSelectProject}
-        onNewProject={() => {
-          setCurrentStage(1);
-          addToast('info', 'New Target', 'Select or enter project details below');
-        }}
-        activeStage={currentStage}
-        isRunningSuite={isRunningSuite}
-        onRunFullPipeline={handleRunFullPipeline}
-        onOpenRequirementsAnalyzer={() => setIsRequirementsModalOpen(true)}
-        onOpenCompletePdf={() => setIsPdfModalOpen(true)}
-        onOpenShortcuts={() => setIsShortcutsOpen(true)}
-        testCount={testCases.length}
+        openDefectsCount={openDefectsCount}
+        testCasesCount={testCases.length}
+        isMobileOpen={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
       />
 
-      {/* 6-Phase Stepper */}
-      <WorkflowStepper
-        currentStage={currentStage}
-        onSelectStage={(s) => setCurrentStage(s)}
-        completedStages={completedStages}
-      />
+      {/* Main SaaS Workspace */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        {/* Top Navigation */}
+        <TopNav
+          currentSection={currentSection}
+          currentProject={currentProject}
+          allProjects={projects}
+          onSelectProject={handleSelectProject}
+          onNewProject={handleStartNewProjectWorkflow}
+          onOpenSearch={() => setIsSearchOpen(true)}
+          onOpenHowItWorks={() => setIsHowItWorksOpen(true)}
+          onOpenMobileMenu={() => setMobileMenuOpen(true)}
+          isDarkMode={isDarkMode}
+          onToggleTheme={toggleTheme}
+          notifications={notifications}
+          onDismissNotification={handleDismissNotification}
+          onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
+        />
 
-      {/* Main Content Area */}
-      <main className="flex-1 pb-16">
-        {/* Stage 1: Onboarding */}
-        {currentStage === 1 && (
-          <ProjectOnboarding
-            onStartAnalysis={handleStartAnalysis}
-            isLoading={isAnalyzing}
-          />
-        )}
+        {/* Viewport Content Area */}
+        <main className="flex-1 overflow-y-auto">
+          {/* PRIMARY WORKFLOW: 4 Connected Screens */}
+          {currentSection === 'workflow' && (
+            <WorkflowShell
+              currentStep={workflowStep}
+              onSelectStep={(step) => setWorkflowStep(step)}
+              currentProject={currentProject}
+              allProjects={projects}
+              onSelectProject={handleSelectProject}
+              onNewProject={handleStartNewProjectWorkflow}
+              analysis={analysis}
+              onUpdateAnalysis={(upd) => setAnalysis(upd)}
+              testCases={testCases}
+              onUpdateTestCases={(upd) => setTestCases(upd)}
+              currentRun={currentRun}
+              isRunningSuite={isRunningSuite}
+              onStartAnalysis={handleStartAnalysis}
+              isAnalyzing={isAnalyzing}
+              onProceedToDesign={handleProceedToDesign}
+              isGeneratingTests={isGeneratingTests}
+              onRunSuite={handleExecuteSuite}
+              onLoadSample={handleLoadSample}
+              onOpenPdfModal={() => setIsPdfModalOpen(true)}
+            />
+          )}
 
-        {/* Stage 2: Application Analyst */}
-        {currentStage === 2 && analysis && (
-          <AppAnalysisView
-            analysis={analysis}
-            project={currentProject}
-            onProceedToDesign={handleProceedToDesign}
-            onReanalyze={() => handleStartAnalysis(currentProject)}
-            isGeneratingTests={isGeneratingTests}
-            testCases={testCases}
-            currentRun={currentRun}
-          />
-        )}
-
-        {/* Stage 3 & 4: Test Designer & Reviewer Gate */}
-        {(currentStage === 3 || currentStage === 4) && (
-          <TestCaseManager
-            testCases={testCases}
-            onUpdateTestCases={(updated) => setTestCases(updated)}
-            reviewFeedbacks={reviewFeedbacks}
-            onRunReviewGate={handleRunReviewGate}
-            onProceedToExecution={() => setCurrentStage(5)}
-            isReviewing={isReviewing}
-            onOpenRequirementsAnalyzer={() => setIsRequirementsModalOpen(true)}
-            analysis={analysis}
-            currentRun={currentRun}
-          />
-        )}
-
-        {/* Stage 5: Execution Engine & Playwright Trace */}
-        {currentStage === 5 && (
-          <div className="space-y-6">
-            <ExecutionConsole
+          {/* Section: Overview (Main Dashboard) */}
+          {currentSection === 'overview' && (
+            <DashboardOverview
+              projects={projects}
+              currentProject={currentProject}
+              onSelectProject={handleSelectProject}
+              onNavigateSection={(sec) => {
+                if (sec === 'test-suites') {
+                  setCurrentSection('workflow');
+                  setWorkflowStep('test_cases');
+                } else if (sec === 'test-runs') {
+                  setCurrentSection('workflow');
+                  setWorkflowStep('execution');
+                } else {
+                  setCurrentSection(sec);
+                }
+              }}
+              onNewProject={handleStartNewProjectWorkflow}
+              onRunFullSuite={() => handleExecuteSuite('none')}
               testCases={testCases}
               currentRun={currentRun}
-              onRunSuite={(mode) => handleExecuteSuite(mode)}
-              isRunning={isRunningSuite}
-              onProceedToReport={() => {
-                setCurrentStage(6);
-                setCompletedStages((prev) => Array.from(new Set([...prev, 6])));
+              defects={defects}
+              onOpenPdfModal={() => setIsPdfModalOpen(true)}
+            />
+          )}
+
+          {/* Section: Projects */}
+          {currentSection === 'projects' && (
+            <ProjectsView
+              projects={projects}
+              currentProject={currentProject}
+              onSelectProject={handleSelectProject}
+              onNewProject={handleStartNewProjectWorkflow}
+              onDeleteProject={handleDeleteProject}
+              onNavigateSection={(sec) => {
+                if (sec === 'test-suites') {
+                  setCurrentSection('workflow');
+                  setWorkflowStep('test_cases');
+                } else {
+                  setCurrentSection(sec);
+                }
               }}
             />
+          )}
 
-            {/* In-page Target Application Sandbox Visualizer */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                  <h4 className="text-sm font-bold text-white">Live Target Surface (Playwright Active Viewport)</h4>
-                </div>
-                <button
-                  onClick={() => setShowSandboxPreview(!showSandboxPreview)}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium"
-                >
-                  {showSandboxPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  <span>{showSandboxPreview ? 'Hide Browser Surface' : 'Show Browser Surface'}</span>
-                </button>
-              </div>
-
-              {showSandboxPreview && (
-                <LiveBrowserSandbox
-                  sampleAppId={currentProject.sampleAppId}
-                  targetUrl={currentProject.targetUrl}
-                  isExecuting={isRunningSuite}
-                  highlightSelector={highlightedSelector}
-                />
-              )}
+          {/* Section: Test Suites & Cases (Direct View) */}
+          {currentSection === 'test-suites' && (
+            <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6 animate-fade-in">
+              <TestCaseManager
+                testCases={testCases}
+                onUpdateTestCases={(updated) => setTestCases(updated)}
+                reviewFeedbacks={reviewFeedbacks}
+                onRunReviewGate={handleRunReviewGate}
+                onProceedToExecution={() => {
+                  setCurrentSection('workflow');
+                  setWorkflowStep('execution');
+                }}
+                isReviewing={isReviewing}
+                onOpenRequirementsAnalyzer={() => setIsRequirementsModalOpen(true)}
+                analysis={analysis}
+                currentRun={currentRun}
+              />
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Stage 6: QA Executive Reports & Exports */}
-        {currentStage === 6 && (
-          <ReportExporter
-            testCases={testCases}
-            currentRun={currentRun}
-            summaryReport={summaryReport}
-            onRerunSuite={() => handleExecuteSuite('none')}
-            project={currentProject}
-            analysis={analysis}
-            reviewFeedbacks={reviewFeedbacks}
-            onOpenPdfModal={() => setIsPdfModalOpen(true)}
-          />
-        )}
-      </main>
+          {/* Section: Test Execution & Sandbox (Direct View) */}
+          {currentSection === 'test-runs' && (
+            <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6 animate-fade-in">
+              <ExecutionConsole
+                testCases={testCases}
+                currentRun={currentRun}
+                onRunSuite={(mode) => handleExecuteSuite(mode)}
+                isRunning={isRunningSuite}
+                onProceedToReport={() => setCurrentSection('reports')}
+              />
+
+              {/* Target Sandbox Visualizer */}
+              <div className="p-4 rounded-2xl bg-[#111A2E] border border-[#26334D] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#22C55E] animate-pulse" />
+                    <h4 className="text-xs sm:text-sm font-bold text-[#F1F5F9]">
+                      Active Browser Surface (Playwright Emulation)
+                    </h4>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowSandboxPreview(!showSandboxPreview)}
+                    className="text-xs text-[#7C5CFC] hover:text-[#9278FF] flex items-center gap-1 font-medium transition"
+                  >
+                    {showSandboxPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    <span>{showSandboxPreview ? 'Collapse Viewport' : 'Expand Viewport'}</span>
+                  </button>
+                </div>
+
+                {showSandboxPreview && (
+                  <LiveBrowserSandbox
+                    sampleAppId={currentProject.sampleAppId}
+                    targetUrl={currentProject.targetUrl}
+                    isExecuting={isRunningSuite}
+                    highlightSelector={highlightedSelector}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Section: Defects & Root Cause Triage */}
+          {currentSection === 'defects' && (
+            <DefectInvestigationView
+              defects={defects}
+              onUpdateDefectStatus={handleUpdateDefectStatus}
+              onUpdateDefectClassification={handleUpdateDefectClassification}
+              onNavigateToTestCase={() => {
+                setCurrentSection('workflow');
+                setWorkflowStep('test_cases');
+              }}
+              onNavigateToRequirement={() => {
+                setCurrentSection('requirements');
+              }}
+            />
+          )}
+
+          {/* Section: Requirement Traceability Matrix */}
+          {currentSection === 'requirements' && (
+            <RequirementTraceabilityView
+              requirements={requirements}
+              testCases={testCases}
+              defects={defects}
+              onNavigateToTestCase={() => {
+                setCurrentSection('workflow');
+                setWorkflowStep('test_cases');
+              }}
+              onNavigateToDefect={() => setCurrentSection('defects')}
+              onGenerateTestForRequirement={handleGenerateTestForRequirement}
+            />
+          )}
+
+          {/* Section: Reports & Exports */}
+          {currentSection === 'reports' && (
+            <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6 animate-fade-in">
+              <ReportExporter
+                testCases={testCases}
+                currentRun={currentRun}
+                summaryReport={summaryReport}
+                onRerunSuite={() => handleExecuteSuite('none')}
+                project={currentProject}
+                analysis={analysis}
+                reviewFeedbacks={reviewFeedbacks}
+                onOpenPdfModal={() => setIsPdfModalOpen(true)}
+              />
+            </div>
+          )}
+
+          {/* Section: Agent Activity */}
+          {currentSection === 'agent-activity' && (
+            <AgentActivityView
+              analysis={analysis}
+              testCases={testCases}
+              currentRun={currentRun}
+              defects={defects}
+              summaryReport={summaryReport}
+              onNavigateSection={(sec) => setCurrentSection(sec)}
+              onTriggerExecution={() => handleExecuteSuite('none')}
+            />
+          )}
+
+          {/* Section: Integrations */}
+          {currentSection === 'integrations' && (
+            <IntegrationsView currentProject={currentProject} />
+          )}
+
+          {/* Section: Settings */}
+          {currentSection === 'settings' && (
+            <SettingsView
+              onResetAllData={handleResetAllData}
+              onAddToast={addToast}
+            />
+          )}
+        </main>
+      </div>
+
+      {/* Global Cmd+K Search Modal */}
+      <GlobalSearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        testCases={testCases}
+        defects={defects}
+        requirements={requirements}
+        projects={projects}
+        onSelectTestCase={() => {
+          setCurrentSection('workflow');
+          setWorkflowStep('test_cases');
+        }}
+        onSelectDefect={() => {
+          setCurrentSection('defects');
+        }}
+        onSelectRequirement={() => {
+          setCurrentSection('requirements');
+        }}
+        onSelectProject={handleSelectProject}
+        onNavigateSection={(sec) => setCurrentSection(sec)}
+      />
+
+      {/* New Project Setup Onboarding Modal (if triggered via modal) */}
+      {isOnboardingOpen && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setIsOnboardingOpen(false)}
+        >
+          <div 
+            className="w-full max-w-4xl bg-[#0E1528] border border-[#26334D] rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6 my-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-4 border-b border-[#26334D]">
+              <div>
+                <h2 className="text-xl font-bold text-[#F1F5F9]">Test a New Application</h2>
+                <p className="text-xs text-[#94A3B8]">
+                  Select an input method: Live URL, ZIP bundle, Git repository, or pasted source code.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOnboardingOpen(false)}
+                className="p-1.5 text-[#64748B] hover:text-[#F1F5F9] rounded-lg transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <ProjectOnboarding
+              onStartAnalysis={handleStartAnalysis}
+              isLoading={isAnalyzing}
+            />
+          </div>
+        </div>
+      )}
 
       {/* AI Requirements & User Stories Analyzer Modal */}
       <RequirementsAnalyzerModal
         isOpen={isRequirementsModalOpen}
         onClose={() => setIsRequirementsModalOpen(false)}
-        onImportGeneratedTests={handleImportGeneratedTests}
+        onImportGeneratedTests={(newCases) => {
+          setTestCases(newCases);
+          setCurrentSection('workflow');
+          setWorkflowStep('test_cases');
+          addToast('success', 'Requirements Imported', `Synthesized ${newCases.length} deterministic test cases`);
+        }}
       />
 
       {/* Complete Application QA Specification & PDF Modal */}
@@ -729,7 +1155,17 @@ export default function App() {
         summaryReport={summaryReport}
       />
 
-      {/* Keyboard Navigation Shortcuts Modal */}
+      {/* How It Works Guide Modal */}
+      <HowItWorksModal
+        isOpen={isHowItWorksOpen}
+        onClose={() => setIsHowItWorksOpen(false)}
+        onTryDemo={() => {
+          setIsHowItWorksOpen(false);
+          handleLoadSample('novashop-ecom');
+        }}
+      />
+
+      {/* Keyboard Shortcuts Modal */}
       <KeyboardShortcutsModal
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}

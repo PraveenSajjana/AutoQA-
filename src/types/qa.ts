@@ -150,11 +150,16 @@ export interface StepExecutionRecord {
   errorMessage?: string;
 }
 
+export type DefectStatus = 'new' | 'confirmed' | 'in_progress' | 'fixed' | 'reopened';
+export type DefectClassification = 'product_defect' | 'suspected_defect' | 'test_script_issue' | 'environment_issue' | 'flaky_test';
+
 export interface DefectTriage {
   id: string;
   testId: string;
   testTitle: string;
   category: TriageCategory;
+  classification?: DefectClassification;
+  status?: DefectStatus;
   confidence: number; // 0 - 100
   severity: 'critical' | 'major' | 'minor';
   rootCauseAnalysis: string;
@@ -163,6 +168,9 @@ export interface DefectTriage {
   expectedBehavior: string;
   suggestedFix: string;
   codeSnippet?: string;
+  requirementId?: string;
+  assignedTo?: string;
+  createdAt?: string;
 }
 
 export interface TestResult {
@@ -293,4 +301,40 @@ export interface BRDDocument {
     requirement: string;
     slaOrTarget: string;
   }[];
+}
+
+export type AppNavigationSection =
+  | 'overview'
+  | 'workflow'
+  | 'projects'
+  | 'test-suites'
+  | 'test-runs'
+  | 'defects'
+  | 'requirements'
+  | 'reports'
+  | 'agent-activity'
+  | 'integrations'
+  | 'settings';
+
+export interface NotificationItem {
+  id: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  linkSection?: AppNavigationSection;
+}
+
+export interface TraceabilityRequirement {
+  id: string;
+  code: string; // e.g. REQ-ECOM-01
+  title: string;
+  description: string;
+  module: string;
+  priority: TestPriority;
+  status: 'covered' | 'partial' | 'uncovered';
+  testCaseIds: string[];
+  defectIds: string[];
+  lastExecutionStatus?: 'passed' | 'failed' | 'running' | 'untested';
 }

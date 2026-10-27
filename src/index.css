@@ -1,1 +1,72 @@
 @import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-main: #0B1020;
+    --bg-sidebar: #0E1528;
+    --bg-panel: #111A2E;
+    --bg-elevated: #172238;
+    --bg-input: #0D1629;
+    --primary-violet: #7C5CFC;
+    --primary-violet-hover: #9278FF;
+    --secondary-cyan: #22D3EE;
+    --text-main: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+    --border-color: #26334D;
+
+    --status-passed: #22C55E;
+    --status-failed: #F87171;
+    --status-warning: #FBBF24;
+    --status-running: #22D3EE;
+    --status-skipped: #94A3B8;
+  }
+
+  /* Clean light theme option */
+  html.light {
+    --bg-main: #F8FAFC;
+    --bg-sidebar: #F1F5F9;
+    --bg-panel: #FFFFFF;
+    --bg-elevated: #F8FAFC;
+    --bg-input: #FFFFFF;
+    --primary-violet: #6D28D9;
+    --primary-violet-hover: #7C3AED;
+    --secondary-cyan: #0891B2;
+    --text-main: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #94A3B8;
+    --border-color: #E2E8F0;
+
+    --status-passed: #16A34A;
+    --status-failed: #DC2626;
+    --status-warning: #D97706;
+    --status-running: #0891B2;
+    --status-skipped: #64748B;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+}
+
+/* Scrollbar polish */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #26334D;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3B4B6E;
+}

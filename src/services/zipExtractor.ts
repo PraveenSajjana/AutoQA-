@@ -16,6 +16,7 @@ export const detectLanguage = (filename: string): string => {
     case 'pyw':
       return 'python';
     case 'json':
+    case 'jsonc':
       return 'json';
     case 'html':
     case 'htm':
@@ -29,6 +30,8 @@ export const detectLanguage = (filename: string): string => {
       return 'vue';
     case 'svelte':
       return 'svelte';
+    case 'astro':
+      return 'astro';
     case 'go':
       return 'go';
     case 'rs':
@@ -72,12 +75,18 @@ export const detectLanguage = (filename: string): string => {
     case 'graphql':
     case 'gql':
       return 'graphql';
+    case 'prisma':
+      return 'prisma';
     default:
       return 'typescript';
   }
 };
 
-const IGNORED_PATH_SEGMENTS = [
+/**
+ * Exact directory names to ignore during ZIP codebase unpacking.
+ * Tested against directory segments only, NEVER matching substrings of filenames.
+ */
+const IGNORED_DIR_NAMES = new Set([
   '__macosx',
   'node_modules',
   '.git',
@@ -88,10 +97,12 @@ const IGNORED_PATH_SEGMENTS = [
   '.next',
   '.nuxt',
   'out',
+  '.output',
   'vendor',
   'venv',
   '.venv',
   'env',
+  '.env',
   '__pycache__',
   'target',
   'coverage',
@@ -101,16 +112,37 @@ const IGNORED_PATH_SEGMENTS = [
   'bin',
   'obj',
   '.turbo',
-  '.cache'
-];
+  '.cache',
+  '.parcel-cache',
+  '.yarn',
+]);
 
+/**
+ * Known binary and non-code file extensions that should be skipped.
+ */
 const BINARY_EXTENSIONS = new Set([
-  'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'svgz',
+  'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'tiff', 'svgz',
   'pdf', 'zip', 'tar', 'gz', 'tgz', '7z', 'rar', 'bz2', 'xz',
   'exe', 'dll', 'so', 'dylib', 'bin', 'class', 'pyc', 'pyo', 'jar',
   'db', 'sqlite', 'sqlite3', 'woff', 'woff2', 'ttf', 'eot', 'otf',
-  'mp3', 'mp4', 'wav', 'ogg', 'mov', 'avi', 'mkv', 'webm',
-  'iso', 'dmg', 'app', 'ipa', 'apk', 'wasm', 'lock'
+  'mp3', 'mp4', 'wav', 'ogg', 'mov', 'avi', 'mkv', 'webm', 'flac', 'aac',
+  'iso', 'dmg', 'app', 'ipa', 'apk', 'wasm', 'dat', 'lock', 'map'
+]);
+
+/**
+ * Heavy lockfiles and minified files to skip to prevent browser choking.
+ */
+const SKIP_FILENAMES = new Set([
+  'package-lock.json',
+  'yarn.lock',
+  'pnpm-lock.yaml',
+  'npm-shrinkwrap.json',
+  'cargo.lock',
+  'poetry.lock',
+  'composer.lock',
+  '.ds_store',
+  'thumbs.db',
+  'desktop.ini'
 ]);
 
 export interface ZipExtractionResult {
@@ -121,12 +153,14 @@ export interface ZipExtractionResult {
   totalBytes: number;
   totalLines: number;
   error?: string;
+  skippedFilesCount?: number;
 }
 
 /**
  * Robustly unpacks a ZIP archive in the browser.
  * Cleans macOS __MACOSX resource forks, skips node_modules & binaries,
- * and extracts all text/code source files.
+ * supports Windows backslashes, preserves directory hierarchy,
+ * and extracts all readable source files.
  */
 export async function extractFilesFromZip(fileOrBuffer: File | ArrayBuffer | Blob): Promise<ZipExtractionResult> {
   try {
@@ -140,43 +174,66 @@ export async function extractFilesFromZip(fileOrBuffer: File | ArrayBuffer | Blo
 
     const rawFiles: PastedSourceFile[] = [];
     const entries = Object.keys(zip.files);
+    let skippedFilesCount = 0;
 
-    for (const relativePath of entries) {
-      const zipEntry = zip.files[relativePath];
-      if (zipEntry.dir) continue;
+    for (const rawPath of entries) {
+      const zipEntry = zip.files[rawPath];
+      // Normalize slashes (handles Windows zip archives with backslashes)
+      const cleanPath = rawPath.replace(/\\/g, '/').replace(/^\/+/, '');
 
-      const lower = relativePath.toLowerCase();
-
-      // Skip directory noise, caches, and VCS
-      if (IGNORED_PATH_SEGMENTS.some((seg) => lower.includes(seg))) {
+      // Skip directory entries
+      if (zipEntry.dir || cleanPath.endsWith('/')) {
         continue;
       }
 
-      const segments = relativePath.split('/').filter(Boolean);
-      const filename = segments.pop() || '';
+      // Skip macOS resource forks & AppleDouble files
+      if (cleanPath.startsWith('__MACOSX/') || cleanPath.includes('/__MACOSX/')) {
+        continue;
+      }
 
-      // Skip AppleDouble resource forks, DS_Store, and empty names
-      if (
-        !filename ||
-        filename.startsWith('._') ||
-        filename === '.DS_Store' ||
-        filename.toLowerCase() === 'thumbs.db' ||
-        filename.toLowerCase() === 'desktop.ini'
-      ) {
+      const segments = cleanPath.split('/');
+      const filename = segments.pop() || '';
+      const filenameLower = filename.toLowerCase();
+
+      // Skip empty filename or AppleDouble/hidden OS files
+      if (!filename || filename.startsWith('._') || SKIP_FILENAMES.has(filenameLower)) {
+        skippedFilesCount++;
+        continue;
+      }
+
+      // Skip minified bundles
+      if (filenameLower.endsWith('.min.js') || filenameLower.endsWith('.min.css')) {
+        skippedFilesCount++;
+        continue;
+      }
+
+      // Check directory segments against IGNORED_DIR_NAMES (exact match on folder name)
+      const dirSegments = segments.map((s) => s.toLowerCase());
+      const isInIgnoredFolder = dirSegments.some((dir) => IGNORED_DIR_NAMES.has(dir));
+      if (isInIgnoredFolder) {
+        skippedFilesCount++;
         continue;
       }
 
       // Skip binary extensions
       const ext = filename.split('.').pop()?.toLowerCase() || '';
       if (BINARY_EXTENSIONS.has(ext)) {
+        skippedFilesCount++;
         continue;
       }
 
       try {
         const content = await zipEntry.async('string');
 
-        // Check if content appears to be binary by looking for null bytes
-        if (content.length > 0 && content.slice(0, 400).includes('\0')) {
+        // Check if content appears to be binary by looking for null bytes in initial chunk
+        if (content.length > 0 && content.slice(0, 300).includes('\0')) {
+          skippedFilesCount++;
+          continue;
+        }
+
+        // Avoid ingesting giant files > 1.2MB into browser memory
+        if (content.length > 1200000) {
+          skippedFilesCount++;
           continue;
         }
 
@@ -184,17 +241,20 @@ export async function extractFilesFromZip(fileOrBuffer: File | ArrayBuffer | Blo
         rawFiles.push({
           id: `zip-${Date.now()}-${rawFiles.length}-${Math.random().toString(36).substring(2, 6)}`,
           name: filename,
-          path: relativePath,
+          path: cleanPath,
           content,
           language: detectLanguage(filename),
           sizeBytes: new Blob([content]).size,
           lineCount: lines.length,
         });
 
-        // Limit to 80 source files to keep DOM & memory lightweight
-        if (rawFiles.length >= 80) break;
+        // Safe maximum limit of 150 source files to keep DOM and state responsive
+        if (rawFiles.length >= 150) {
+          break;
+        }
       } catch (readErr) {
-        console.warn(`Could not read entry ${relativePath}:`, readErr);
+        console.warn(`Could not read entry ${cleanPath}:`, readErr);
+        skippedFilesCount++;
       }
     }
 
@@ -204,17 +264,27 @@ export async function extractFilesFromZip(fileOrBuffer: File | ArrayBuffer | Blo
         files: [],
         totalBytes: 0,
         totalLines: 0,
-        error: 'No readable code or text files found in this ZIP archive. Please ensure it contains source code (e.g. .tsx, .jsx, .py, .js, .json).',
+        skippedFilesCount,
+        error: 'No readable code or text files found in this ZIP archive. Please ensure the archive contains standard source files (.tsx, .jsx, .ts, .js, .py, .html, .json) and is not empty or composed solely of binaries and node_modules.',
       };
     }
 
-    // Sort files to put entry points first (package.json, App, main, index)
+    // Sort files to put entry points first (package.json, App, main, index, routes)
     rawFiles.sort((a, b) => {
-      const aIsCore = a.name.toLowerCase().includes('package.json') || a.name.toLowerCase().includes('app') || a.name.toLowerCase().includes('index') || a.name.toLowerCase().includes('main');
-      const bIsCore = b.name.toLowerCase().includes('package.json') || b.name.toLowerCase().includes('app') || b.name.toLowerCase().includes('index') || b.name.toLowerCase().includes('main');
-      if (aIsCore && !bIsCore) return -1;
-      if (!aIsCore && bIsCore) return 1;
-      return a.name.localeCompare(b.name);
+      const aLower = a.name.toLowerCase();
+      const bLower = b.name.toLowerCase();
+      const aScore = aLower === 'package.json' ? 100 :
+        aLower.startsWith('app') ? 90 :
+        aLower.startsWith('main') ? 85 :
+        aLower.startsWith('index') ? 80 :
+        aLower.includes('router') || aLower.includes('route') ? 70 : 10;
+      const bScore = bLower === 'package.json' ? 100 :
+        bLower.startsWith('app') ? 90 :
+        bLower.startsWith('main') ? 85 :
+        bLower.startsWith('index') ? 80 :
+        bLower.includes('router') || bLower.includes('route') ? 70 : 10;
+      if (aScore !== bScore) return bScore - aScore;
+      return a.path && b.path ? a.path.localeCompare(b.path) : a.name.localeCompare(b.name);
     });
 
     // Detect framework & project name from files
@@ -231,7 +301,22 @@ export async function extractFilesFromZip(fileOrBuffer: File | ArrayBuffer | Blo
         if (deps.next) detectedFramework = 'Next.js';
         if (deps.vue) detectedFramework = 'Vue.js';
         if (deps.express) detectedFramework = 'Express / Node.js';
+        if (deps.svelte) detectedFramework = 'Svelte';
+        if (deps.astro) detectedFramework = 'Astro';
       } catch (_) {}
+    }
+
+    // If no package.json name, check if all files share a common root folder prefix
+    if (!detectedName && rawFiles.length > 0) {
+      const firstPath = rawFiles[0].path || '';
+      if (firstPath.includes('/')) {
+        const candidateRoot = firstPath.split('/')[0];
+        // Check if all files share this prefix
+        const allShare = rawFiles.every((f) => (f.path || '').startsWith(candidateRoot + '/'));
+        if (allShare && candidateRoot.length > 1 && !['src', 'app', 'public', 'pages', 'components'].includes(candidateRoot.toLowerCase())) {
+          detectedName = candidateRoot.replace(/-master$|-main$/, '');
+        }
+      }
     }
 
     const combinedText = rawFiles.map((f) => f.content).join('\n');
@@ -251,6 +336,7 @@ export async function extractFilesFromZip(fileOrBuffer: File | ArrayBuffer | Blo
       detectedFramework,
       totalBytes,
       totalLines,
+      skippedFilesCount,
     };
   } catch (err: any) {
     return {
@@ -258,7 +344,7 @@ export async function extractFilesFromZip(fileOrBuffer: File | ArrayBuffer | Blo
       files: [],
       totalBytes: 0,
       totalLines: 0,
-      error: `Failed to extract ZIP file: ${err.message || 'Archive may be corrupted or using unsupported compression.'}`,
+      error: `Failed to extract ZIP archive: ${err.message || 'The archive may be corrupted, password-protected, or using an unsupported compression method.'}`,
     };
   }
 }

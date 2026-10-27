@@ -969,6 +969,42 @@ Provide a comprehensive QA executive summary in JSON:
   });
 });
 
+// ==========================================
+// PERSISTENT PROJECTS API ENDPOINTS
+// ==========================================
+const serverProjectsStore = new Map<string, any>();
+
+app.get('/api/qa/projects', (_req, res) => {
+  const projects = Array.from(serverProjectsStore.values()).map((item) => item.project);
+  return res.json({ success: true, projects });
+});
+
+app.post('/api/qa/projects', (req, res) => {
+  const { project, sessionData } = req.body;
+  if (!project || !project.id) {
+    return res.status(400).json({ success: false, error: 'Project and project.id are required' });
+  }
+  serverProjectsStore.set(project.id, {
+    project,
+    sessionData: sessionData || null,
+    updatedAt: new Date().toISOString(),
+  });
+  return res.json({ success: true, project });
+});
+
+app.get('/api/qa/projects/:id', (req, res) => {
+  const record = serverProjectsStore.get(req.params.id);
+  if (!record) {
+    return res.status(404).json({ success: false, error: 'Project not found' });
+  }
+  return res.json({ success: true, project: record.project, sessionData: record.sessionData });
+});
+
+app.delete('/api/qa/projects/:id', (req, res) => {
+  serverProjectsStore.delete(req.params.id);
+  return res.json({ success: true });
+});
+
 // Setup Vite Dev Middleware or Static Hosting
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

@@ -53,7 +53,7 @@ export const AppAnalysisView: React.FC<AppAnalysisViewProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3" /> Agent 1: Application Analyst Output
+              <Sparkles className="w-3 h-3" /> Step 2 of 5: Discovered Application Map
             </span>
             {project?.pastedFiles && project.pastedFiles.length > 0 && (
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5 font-mono">
@@ -105,7 +105,7 @@ export const AppAnalysisView: React.FC<AppAnalysisViewProps> = ({
             className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition disabled:opacity-50"
           >
             <Cpu className="w-4 h-4" />
-            <span>{isGeneratingTests ? 'Agent 2 Designing Cases...' : 'Proceed to Agent 2: Test Designer'}</span>
+            <span>{isGeneratingTests ? 'Synthesizing Test Scenarios...' : 'Proceed to Step 3: Review Generated Tests'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -304,6 +304,32 @@ export const AppAnalysisView: React.FC<AppAnalysisViewProps> = ({
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Bottom Systematic Navigation Bar */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/30 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold font-mono text-sm">
+            2/5
+          </div>
+          <div>
+            <div className="text-xs font-bold text-white">Application Features Successfully Mapped</div>
+            <div className="text-[11px] text-slate-400">
+              Ready to generate verified Playwright test scenarios for {analysis.appName}.
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <button
+            onClick={onProceedToDesign}
+            disabled={isGeneratingTests}
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition disabled:opacity-50"
+          >
+            <span>{isGeneratingTests ? 'Synthesizing Test Scenarios...' : 'Proceed to Step 3: Review Generated Tests'}</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>

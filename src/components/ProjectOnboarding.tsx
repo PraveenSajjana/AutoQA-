@@ -498,17 +498,90 @@ Acceptance Criteria:
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
-      <div className="text-center mb-8">
+    <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 space-y-6">
+      {/* Title & Systematic Subtitle */}
+      <div className="text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-3">
-          <Code2 className="w-3.5 h-3.5" /> Phase 1: Target Ingestion &amp; Onboarding
+          <Code2 className="w-3.5 h-3.5" /> Step 1 of 5: Ingest Your Product
         </div>
         <h1 className="text-3xl font-extrabold text-white tracking-tight">
           Add Your Product to QA-Agent
         </h1>
-        <p className="text-slate-400 text-sm mt-2 max-w-xl mx-auto">
-          The easiest, fastest way to onboard your application. Copy-paste source files, upload a ZIP, or connect a live endpoint.
+        <p className="text-slate-400 text-sm mt-2 max-w-xl mx-auto leading-relaxed">
+          The easiest way to generate and run Playwright tests for your web application. Paste code, upload a ZIP, or test a live website.
         </p>
+      </div>
+
+      {/* Systematic 1-Click Demo Launcher Card (Great for first-time / non-technical users) */}
+      <div className="p-5 rounded-2xl bg-gradient-to-r from-indigo-950/40 via-slate-900 to-slate-900 border border-indigo-500/30 shadow-lg space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <h2 className="text-xs font-bold text-white uppercase tracking-wider">
+                Instant 1-Click Demos (No Files Required)
+              </h2>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Want to see AutoQA in action immediately? Launch a pre-configured sample application with pre-computed test cases:
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              const observe = SAMPLE_APPS.find((s) => s.id === 'observe-speech-qa') || SAMPLE_APPS[0];
+              onStartAnalysis({
+                name: observe.name,
+                inputType: 'sandbox_app',
+                targetUrl: observe.url,
+                sampleAppId: observe.id,
+              });
+            }}
+            className="p-3.5 rounded-xl bg-slate-950 border border-indigo-500/30 hover:border-indigo-400 text-left transition group hover:bg-indigo-950/20 flex items-start gap-3"
+          >
+            <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+              <Code2 className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-white group-hover:text-indigo-300 transition flex items-center gap-1.5">
+                <span>Observe.ai Platform</span>
+                <span className="text-[10px] text-amber-400 font-mono">Popular</span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                Call transcript viewer, sentiment filters &amp; QA scorecard
+              </p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const nova = SAMPLE_APPS.find((s) => s.id === 'novashop-ecom') || SAMPLE_APPS[0];
+              onStartAnalysis({
+                name: nova.name,
+                inputType: 'sandbox_app',
+                targetUrl: nova.url,
+                sampleAppId: nova.id,
+              });
+            }}
+            className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-emerald-500/40 text-left transition group hover:bg-emerald-950/10 flex items-start gap-3"
+          >
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+              <Globe className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-white group-hover:text-emerald-300 transition">
+                NovaShop E-Commerce
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                Cart discount calculation, promo code SAVE20 &amp; checkout
+              </p>
+            </div>
+          </button>
+        </div>
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
@@ -1318,9 +1391,9 @@ Acceptance Criteria:
             <button
               type="submit"
               disabled={isLoading || isLinkingFolder}
-              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition disabled:opacity-50"
             >
-              <span>{isLoading ? 'Agent 1 Analyzing...' : 'Analyze Application with Agent 1'}</span>
+              <span>{isLoading ? 'Analyzing Codebase Structure...' : 'Proceed to Step 2: Map App Features'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

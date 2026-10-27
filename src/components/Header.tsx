@@ -7,7 +7,9 @@ import {
   FileText, 
   Sparkles,
   HelpCircle,
-  ChevronDown
+  Trash2,
+  ChevronDown,
+  BookOpen
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -21,7 +23,9 @@ interface HeaderProps {
   onOpenRequirementsAnalyzer?: () => void;
   onOpenCompletePdf?: () => void;
   onOpenShortcuts?: () => void;
+  onOpenHowItWorks?: () => void;
   testCount?: number;
+  onDeleteCurrentProject?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -35,7 +39,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenRequirementsAnalyzer,
   onOpenCompletePdf,
   onOpenShortcuts,
+  onOpenHowItWorks,
   testCount = 0,
+  onDeleteCurrentProject,
 }) => {
   return (
     <header className="border-b border-slate-800/90 bg-slate-900/95 backdrop-blur-md sticky top-0 z-40">
@@ -73,12 +79,24 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 {allProjects.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name}
+                    {p.name} {p.zipFileName ? '(ZIP)' : p.pastedFiles?.length ? '(Code)' : ''}
                   </option>
                 ))}
               </select>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 pointer-events-none" />
             </div>
+
+            {/* Delete button for user-added / uploaded projects */}
+            {!currentProject.sampleAppId && onDeleteCurrentProject && (
+              <button
+                type="button"
+                onClick={onDeleteCurrentProject}
+                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
+                title={`Delete ${currentProject.name} from local storage`}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
 
             <button
               onClick={onNewProject}
@@ -94,28 +112,38 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Unboxed Metadata (Anti-slop zero pill rule) */}
             <div className="hidden xl:flex items-center gap-2 text-[11px] text-slate-400 font-mono ml-1">
               <span>·</span>
-              <span className="text-slate-300 font-medium">{testCount > 0 ? `${testCount} Test Cases` : 'Suite Ready'}</span>
+              <span className="text-slate-300 font-medium">{testCount > 0 ? `${testCount} Tests Ready` : 'Suite Ready'}</span>
               <span>·</span>
-              <span className="text-emerald-400 font-medium">Playwright 1.48</span>
+              <span className="text-emerald-400 font-medium">Safe Sandbox</span>
             </div>
           </div>
         </div>
 
-        {/* Zone 2: Stage Breadcrumb / Quick Status */}
+        {/* Zone 2: Systematic Step Breadcrumb */}
         <div className="hidden md:flex items-center gap-2 text-xs font-mono text-slate-400">
-          <span className="text-slate-400">Pipeline:</span>
+          <span className="text-slate-500">Step:</span>
           <span className="text-indigo-300 font-semibold">
-            {activeStage === 1 && 'Phase 1: Target Ingestion'}
-            {activeStage === 2 && 'Phase 2: Route Analysis'}
-            {activeStage === 3 && 'Phase 3: Test Design'}
-            {activeStage === 4 && 'Phase 4: Review Gate'}
-            {activeStage === 5 && 'Phase 5: Playwright Execution'}
-            {activeStage === 6 && 'Phase 6: QA Signoff & Exports'}
+            {activeStage === 1 && '1 of 5: Ingest Product'}
+            {activeStage === 2 && '2 of 5: App Feature Map'}
+            {(activeStage === 3 || activeStage === 4) && '3 of 5: Test Plan & Review'}
+            {activeStage === 5 && '4 of 5: Safe Execution'}
+            {activeStage === 6 && '5 of 5: Results & Signoff'}
           </span>
         </div>
 
         {/* Zone 3: Quick Action Tools & Primary CTA */}
         <div className="flex items-center gap-2 shrink-0">
+          {onOpenHowItWorks && (
+            <button
+              onClick={onOpenHowItWorks}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 hover:text-indigo-200 text-xs font-medium rounded-lg border border-indigo-500/30 transition"
+              title="Learn how AutoQA works systematically"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden sm:inline">How It Works</span>
+            </button>
+          )}
+
           {onOpenRequirementsAnalyzer && (
             <button
               onClick={onOpenRequirementsAnalyzer}
@@ -130,7 +158,7 @@ export const Header: React.FC<HeaderProps> = ({
           {onOpenCompletePdf && (
             <button
               onClick={onOpenCompletePdf}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-850 hover:bg-slate-800 text-slate-200 hover:text-white text-xs font-medium rounded-lg border border-slate-700/80 hover:border-slate-600 transition"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-slate-850 hover:bg-slate-800 text-slate-200 hover:text-white text-xs font-medium rounded-lg border border-slate-700/80 hover:border-slate-600 transition"
               title="Generate & View Complete Application QA PDF [Press P]"
             >
               <FileText className="w-3.5 h-3.5 text-slate-400" />
