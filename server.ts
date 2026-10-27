@@ -234,7 +234,60 @@ Output MUST be valid JSON with this exact schema:
     });
   }
 
-  const resolvedRoutes = dynamicallyDiscoveredRoutes.length > 0 ? dynamicallyDiscoveredRoutes : [
+  const isFlipkart = (appName || '').toLowerCase().includes('flipkart') || 
+                     (targetUrl || '').toLowerCase().includes('flipkart');
+
+  const flipkartRoutes = [
+    {
+      path: '/',
+      name: 'Storefront & Search Header',
+      description: 'Homepage banner carousel, universal search input, and account authentication portal.',
+      criticality: 'critical' as const,
+      interactiveElements: [
+        { type: 'input' as const, selector: 'search-input', label: 'Universal Search Input', purpose: 'Product query search' },
+        { type: 'button' as const, selector: 'search-submit-btn', label: 'Search Button', purpose: 'Triggers search query' },
+        { type: 'button' as const, selector: 'cart-badge', label: 'Cart Badge', purpose: 'Navigates to cart summary' }
+      ],
+      potentialRisks: ['Search autocomplete latency', 'Search input XSS sanitization']
+    },
+    {
+      path: '/account/login',
+      name: 'Mobile Number OTP Login',
+      description: 'Secure mobile number authentication (8722451115) with SMS OTP verification.',
+      criticality: 'critical' as const,
+      interactiveElements: [
+        { type: 'input' as const, selector: 'mobile-login-input', label: 'Mobile Number Input', purpose: '10-digit Indian mobile number (8722451115)' },
+        { type: 'button' as const, selector: 'request-otp-btn', label: 'Request OTP Button', purpose: 'Dispatches 6-digit SMS OTP' },
+        { type: 'input' as const, selector: 'otp-input', label: 'OTP Input Field', purpose: '6-digit SMS OTP code' },
+        { type: 'button' as const, selector: 'verify-otp-btn', label: 'Verify Button', purpose: 'Exchanges OTP for session token' }
+      ],
+      potentialRisks: ['SMS gateway timeout', '10-digit regex bypass', 'Brute force OTP attempts']
+    },
+    {
+      path: '/search?q=iPhone+17+Pro+Max',
+      name: 'Product Listing & Search Results',
+      description: 'Filtered catalog results showing Apple iPhone 17 Pro Max models, ratings, and pricing.',
+      criticality: 'critical' as const,
+      interactiveElements: [
+        { type: 'button' as const, selector: 'product-card-17-pro-max', label: 'iPhone 17 Pro Max Card', purpose: 'Navigates to product detail page' },
+        { type: 'button' as const, selector: 'add-to-cart-btn', label: 'Quick Add to Cart', purpose: 'Puts item in cart immediately' }
+      ],
+      potentialRisks: ['Out of stock race condition', 'Variant SKU price desync']
+    },
+    {
+      path: '/viewcart',
+      name: 'Shopping Cart & Order Summary',
+      description: 'Active cart items, delivery pincode availability, SuperCoins discount, and Place Order button.',
+      criticality: 'critical' as const,
+      interactiveElements: [
+        { type: 'input' as const, selector: 'apply-supercoins-checkbox', label: 'SuperCoins Checkbox', purpose: 'Deducts loyalty coins' },
+        { type: 'button' as const, selector: 'proceed-to-buy-btn', label: 'Place Order Button', purpose: 'Proceeds to payment & address' }
+      ],
+      potentialRisks: ['Price calculation mismatch', 'Session expiry during checkout transition']
+    }
+  ];
+
+  const resolvedRoutes = isFlipkart ? flipkartRoutes : (dynamicallyDiscoveredRoutes.length > 0 ? dynamicallyDiscoveredRoutes : [
     {
       path: '/',
       name: 'Primary Dashboard / Landing',
@@ -269,7 +322,7 @@ Output MUST be valid JSON with this exact schema:
       ],
       potentialRisks: ['Unsaved changes loss on modal close', 'XSS in display name input']
     }
-  ];
+  ]);
 
   return res.json({
     success: true,
@@ -550,10 +603,100 @@ Do not invent unverified requirements; mark uncertain assumptions in uncertainAs
   }
 
   // Heuristic Fallback Test Generation
+  const isFlipkart = (analysis?.appName || '').toLowerCase().includes('flipkart') ||
+                     (analysis?.targetUrl || '').toLowerCase().includes('flipkart') ||
+                     (analysis?.summary || '').toLowerCase().includes('flipkart') ||
+                     (focusArea || '').toLowerCase().includes('flipkart');
+
   const isObserveAi = (analysis?.appName || '').toLowerCase().includes('observe') || 
                       (analysis?.summary || '').toLowerCase().includes('observe');
 
-  const testCases = isObserveAi ? [
+  const testCases = isFlipkart ? [
+    {
+      test_id: 'FK-001',
+      requirement_id: 'REQ-FK-LOGIN-01',
+      module: 'Authentication & Mobile OTP',
+      title: 'Authenticate with Registered Mobile Number (8722451115) via OTP',
+      priority: 'critical',
+      category: 'functional',
+      automation_feasibility: 'automated_playwright',
+      preconditions: ['User is on Flipkart login modal or homepage', 'Mobile network active for OTP delivery'],
+      uncertainAssumptions: ['Assuming SMS gateway simulator provides test OTP (729401) for number 8722451115'],
+      steps: [
+        { action: 'navigate', target: '/account/login', description: 'Open Flipkart login dialog' },
+        { action: 'fill', target: 'mobile-login-input', value: '8722451115', description: 'Enter registered mobile number 8722451115' },
+        { action: 'click', target: 'request-otp-btn', description: 'Click Request OTP button' },
+        { action: 'assert_visible', target: 'otp-verification-screen', description: 'Verify OTP input field is rendered' },
+        { action: 'fill', target: 'otp-input', value: '729401', description: 'Enter verified 6-digit OTP code' },
+        { action: 'click', target: 'verify-otp-btn', description: 'Confirm OTP verification' },
+        { action: 'assert_visible', target: 'user-account-badge', description: 'Verify authenticated account badge for 8722451115 appears' }
+      ],
+      expected_result: 'User is authenticated with mobile number 8722451115; session token granted and user badge visible',
+      status: 'pending_review'
+    },
+    {
+      test_id: 'FK-002',
+      requirement_id: 'REQ-FK-CART-02',
+      module: 'Catalog Search & Cart Addition',
+      title: 'Search for "iPhone 17 Pro Max" and Add to Cart with Price Verification (₹1,59,900)',
+      priority: 'critical',
+      category: 'functional',
+      automation_feasibility: 'automated_playwright',
+      preconditions: ['User session active with mobile 8722451115', 'Inventory available for iPhone 17 Pro Max'],
+      uncertainAssumptions: ['Assumes iPhone 17 Pro Max 256GB Desert Titanium catalog item is indexed and in stock at ₹1,59,900'],
+      steps: [
+        { action: 'navigate', target: '/', description: 'Navigate to Flipkart homepage' },
+        { action: 'fill', target: 'search-input', value: 'iPhone 17 Pro Max', description: 'Type "iPhone 17 Pro Max" in search box' },
+        { action: 'click', target: 'search-submit-btn', description: 'Execute search query' },
+        { action: 'assert_visible', target: 'product-card-17-pro-max', description: 'Confirm iPhone 17 Pro Max product card is rendered' },
+        { action: 'assert_text', target: 'product-price', value: '₹1,59,900', description: 'Verify price displays ₹1,59,900' },
+        { action: 'click', target: 'add-to-cart-btn', description: 'Click Add to Cart button' },
+        { action: 'assert_visible', target: 'cart-badge', description: 'Confirm shopping cart badge updates to 1 item' },
+        { action: 'assert_visible', target: 'cart-drawer', description: 'Ensure cart drawer reflects iPhone 17 Pro Max line item' }
+      ],
+      expected_result: 'Apple iPhone 17 Pro Max (256 GB) is added to cart at ₹1,59,900 and cart count increments to 1',
+      status: 'pending_review'
+    },
+    {
+      test_id: 'FK-003',
+      requirement_id: 'REQ-FK-DISCOUNT-03',
+      module: 'Checkout & Loyalty Rewards',
+      title: 'Verify Cart Subtotal & SuperCoins Loyalty Discount Calculation',
+      priority: 'high',
+      category: 'functional',
+      automation_feasibility: 'automated_playwright',
+      preconditions: ['iPhone 17 Pro Max present in cart', 'User has active SuperCoins balance'],
+      uncertainAssumptions: ['Assuming customer account 8722451115 has eligible SuperCoins balance for ₹2,000 deduction'],
+      steps: [
+        { action: 'navigate', target: '/viewcart', description: 'Navigate to Shopping Cart view' },
+        { action: 'assert_visible', target: 'cart-item-title', description: 'Assert iPhone 17 Pro Max is listed' },
+        { action: 'assert_text', target: 'cart-total', value: '₹1,59,900', description: 'Verify initial subtotal is ₹1,59,900' },
+        { action: 'click', target: 'apply-supercoins-checkbox', description: 'Check "Apply Flipkart SuperCoins" discount box' },
+        { action: 'assert_visible', target: 'discounted-total', description: 'Verify discounted total ₹1,57,900 is displayed' }
+      ],
+      expected_result: 'SuperCoins loyalty discount reduces payable amount from ₹1,59,900 to ₹1,57,900',
+      status: 'pending_review'
+    },
+    {
+      test_id: 'FK-004',
+      requirement_id: 'REQ-FK-NEG-04',
+      module: 'Input Boundary & Validation',
+      title: 'Reject Incomplete 9-Digit Mobile Number on Login (Negative Boundary Test)',
+      priority: 'high',
+      category: 'negative',
+      automation_feasibility: 'automated_playwright',
+      preconditions: ['User on Flipkart login dialog'],
+      uncertainAssumptions: ['Assumes client-side regex strictly validates 10 numeric digits before dispatching OTP API'],
+      steps: [
+        { action: 'navigate', target: '/account/login', description: 'Open login modal' },
+        { action: 'fill', target: 'mobile-login-input', value: '872245111', description: 'Enter 9 digits (872245111) missing last digit' },
+        { action: 'click', target: 'request-otp-btn', description: 'Attempt to request OTP' },
+        { action: 'assert_visible', target: 'mobile-error-message', description: 'Verify "Please enter a valid 10-digit mobile number" warning' }
+      ],
+      expected_result: 'Client validation prevents OTP dispatch and surfaces inline error message',
+      status: 'pending_review'
+    }
+  ] : isObserveAi ? [
     {
       test_id: 'OBS-001',
       requirement_id: 'REQ-OBS-EVAL-01',

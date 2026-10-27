@@ -133,3 +133,63 @@ test('5. Project Session Serialization - maintains multi-screen state integrity'
   assert.equal(parsed.analysis.routes.length, 1);
   assert.equal(parsed.testCasesCount, 3);
 });
+
+test('6. Flipkart E-Commerce Journey - validates mobile 8722451115 login & iPhone 17 Pro Max cart steps', () => {
+  const flipkartAuthTest: TestCase = {
+    test_id: 'FK-001',
+    requirement_id: 'REQ-FK-LOGIN-01',
+    title: 'Authenticate with Registered Mobile Number (8722451115) via OTP',
+    priority: 'critical',
+    preconditions: ['User on login modal'],
+    steps: [
+      { action: 'navigate', target: '/account/login' },
+      { action: 'fill', target: 'mobile-login-input', value: '8722451115' },
+      { action: 'click', target: 'request-otp-btn' },
+      { action: 'assert_visible', target: 'otp-verification-screen' },
+      { action: 'fill', target: 'otp-input', value: '729401' },
+      { action: 'click', target: 'verify-otp-btn' },
+      { action: 'assert_visible', target: 'user-account-badge' }
+    ],
+    expected_result: 'User is authenticated with mobile number 8722451115',
+    status: 'approved'
+  };
+
+  const flipkartCartTest: TestCase = {
+    test_id: 'FK-002',
+    requirement_id: 'REQ-FK-CART-02',
+    title: 'Search for "iPhone 17 Pro Max" and Add to Cart with Price Verification (₹1,59,900)',
+    priority: 'critical',
+    preconditions: ['User authenticated as 8722451115'],
+    steps: [
+      { action: 'navigate', target: '/' },
+      { action: 'fill', target: 'search-input', value: 'iPhone 17 Pro Max' },
+      { action: 'click', target: 'search-submit-btn' },
+      { action: 'assert_visible', target: 'product-card-17-pro-max' },
+      { action: 'assert_text', target: 'product-price', value: '₹1,59,900' },
+      { action: 'click', target: 'add-to-cart-btn' },
+      { action: 'assert_visible', target: 'cart-badge' },
+      { action: 'assert_visible', target: 'cart-drawer' }
+    ],
+    expected_result: 'Apple iPhone 17 Pro Max is added to cart at ₹1,59,900 and cart count increments to 1',
+    status: 'approved'
+  };
+
+  // Verify mobile number parameter
+  const mobileStep = flipkartAuthTest.steps.find((s) => s.target === 'mobile-login-input');
+  assert.ok(mobileStep, 'Mobile login input step must exist');
+  assert.equal(mobileStep?.value, '8722451115');
+
+  // Verify iPhone 17 Pro Max search and cart steps
+  const searchStep = flipkartCartTest.steps.find((s) => s.target === 'search-input');
+  assert.ok(searchStep, 'Search input step must exist');
+  assert.equal(searchStep?.value, 'iPhone 17 Pro Max');
+
+  const addToCartStep = flipkartCartTest.steps.find((s) => s.target === 'add-to-cart-btn');
+  assert.ok(addToCartStep, 'Add to cart button step must exist');
+  assert.equal(addToCartStep?.action, 'click');
+
+  const priceAssertionStep = flipkartCartTest.steps.find((s) => s.target === 'product-price');
+  assert.ok(priceAssertionStep, 'Product price assertion must exist');
+  assert.equal(priceAssertionStep?.value, '₹1,59,900');
+});
+

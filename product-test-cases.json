@@ -1,0 +1,1062 @@
+{
+  "projectId": "autoqa-studio-platform",
+  "appName": "AutoQA Studio — Autonomous AI-Powered Software Testing Platform",
+  "version": "v2.5.0",
+  "summary": "Autonomous QA engineering platform that ingests web applications, codebases, ZIP archives, and requirements specs to discover DOM architecture, synthesize deterministic Playwright test suites, enforce human-in-the-loop review gating, execute test runs with trace telemetry, triage defect root causes, and export executive QA reports.",
+  "techStackDetected": [
+    "React 19.0.1",
+    "TypeScript 5.x",
+    "Vite 8.3.0",
+    "Tailwind CSS v4",
+    "Express 4.21.2",
+    "@playwright/test",
+    "jsPDF 4.2",
+    "JSZip 3.10",
+    "Lucide React"
+  ],
+  "routes": [
+    {
+      "path": "/",
+      "name": "Platform Shell & Workflow Wizard",
+      "description": "Main application shell with collapsible sidebar navigation, global top navigation bar, theme toggle, and 4-step linear QA workflow wizard.",
+      "criticality": "critical",
+      "interactiveElements": [
+        { "type": "button", "selector": "button:has-text('New Project')", "label": "New Project CTA", "purpose": "Opens new project onboarding wizard" },
+        { "type": "button", "selector": "button[title*='Search']", "label": "Global Search Trigger", "purpose": "Opens Cmd+K search modal" },
+        { "type": "button", "selector": "button[title*='theme']", "label": "Theme Toggle", "purpose": "Switches between dark (#0B1020) and light modes" },
+        { "type": "button", "selector": "button[aria-label*='sidebar']", "label": "Sidebar Toggle", "purpose": "Expands or collapses left sidebar navigation" }
+      ],
+      "potentialRisks": [
+        "Unsaved session state loss on abrupt tab close",
+        "Theme flicker on initial cold load before localStorage read"
+      ]
+    },
+    {
+      "path": "/workflow/new_project",
+      "name": "Step 1: New Project Onboarding",
+      "description": "Target web application ingestion form with URL format validation, project naming, environment target selection, and test credentials input.",
+      "criticality": "critical",
+      "interactiveElements": [
+        { "type": "input", "selector": "#target-url-input", "label": "Target Application URL", "purpose": "Receives target HTTP/HTTPS website URL" },
+        { "type": "input", "selector": "#project-name-input", "label": "Project Identifier Name", "purpose": "Custom name for project" },
+        { "type": "select", "selector": "#environment-select", "label": "Test Environment Dropdown", "purpose": "Selects staging, production, or local server" },
+        { "type": "input", "selector": "input[type='checkbox']", "label": "Credentials Toggle", "purpose": "Enables username/password input fields" },
+        { "type": "button", "selector": "button[type='submit']", "label": "Start Application Analysis Button", "purpose": "Validates inputs and transitions to Step 2" }
+      ],
+      "potentialRisks": [
+        "SSRF or malicious target URL injection",
+        "Network timeout during initial remote endpoint discovery"
+      ]
+    },
+    {
+      "path": "/workflow/analysis",
+      "name": "Step 2: Application Analysis & Route Discovery",
+      "description": "Visualizes discovered application structure, routes, interactive DOM components, criticality ratings, and boundary risk scenarios with custom route additions.",
+      "criticality": "critical",
+      "interactiveElements": [
+        { "type": "button", "selector": "button:has-text('Generate Test Cases')", "label": "Generate Test Cases Button", "purpose": "Synthesizes deterministic Playwright test cases and moves to Step 3" },
+        { "type": "button", "selector": "button:has-text('Re-analyze')", "label": "Re-analyze Button", "purpose": "Triggers fresh inspection scan on target" },
+        { "type": "button", "selector": "button:has-text('Add Custom Route')", "label": "Add Route Button", "purpose": "Opens manual route ingestion form" }
+      ],
+      "potentialRisks": [
+        "Route hierarchy mismatch on complex single-page micro-frontends",
+        "Omission of dynamically loaded modal dialogs from static route trees"
+      ]
+    },
+    {
+      "path": "/workflow/test_cases",
+      "name": "Step 3: Test Case Review & Approval Gate",
+      "description": "Human-in-the-loop review workspace allowing QA engineers to inspect test steps, assertions, priority, category, edit steps, and approve or reject test cases.",
+      "criticality": "critical",
+      "interactiveElements": [
+        { "type": "input", "selector": "input[placeholder*='Search test cases']", "label": "Test Case Search Filter", "purpose": "Filters test cases by ID, title, or requirement" },
+        { "type": "button", "selector": "button:has-text('Approve All')", "label": "Bulk Approve Button", "purpose": "Marks all unrejected test cases as approved" },
+        { "type": "button", "selector": "button:has-text('Approve')", "label": "Individual Approve Button", "purpose": "Sets test case status to approved" },
+        { "type": "button", "selector": "button:has-text('Reject')", "label": "Individual Reject Button", "purpose": "Sets test case status to rejected" },
+        { "type": "button", "selector": "button:has-text('Edit Test')", "label": "Edit Test Button", "purpose": "Opens interactive test step editor" },
+        { "type": "button", "selector": "button:has-text('Proceed to Execution')", "label": "Proceed to Execution Button", "purpose": "Gated submission button active only when >=1 test is approved" }
+      ],
+      "potentialRisks": [
+        "Execution of unverified or hallucinated test selectors without review",
+        "Approval bypass allowing unapproved tests to run"
+      ]
+    },
+    {
+      "path": "/workflow/execution",
+      "name": "Step 4: Test Execution & Evidence",
+      "description": "Interactive test execution workspace providing real-time run progress, step-by-step logs, live interactive DOM sandbox, defect root-cause triage, and report exports.",
+      "criticality": "critical",
+      "interactiveElements": [
+        { "type": "button", "selector": "button:has-text('Run Test Suite')", "label": "Run Suite Button", "purpose": "Initiates test runner execution across approved tests" },
+        { "type": "select", "selector": "select[value*='product_bug']", "label": "Defect Simulation Selector", "purpose": "Injects deterministic defect scenarios (product bug, flaky selector, timeout)" },
+        { "type": "button", "selector": "button:has-text('Export JSON Report')", "label": "Export JSON Button", "purpose": "Downloads full run results as structured JSON" },
+        { "type": "button", "selector": "button:has-text('Export HTML Report')", "label": "Export HTML Button", "purpose": "Downloads standalone interactive HTML report" }
+      ],
+      "potentialRisks": [
+        "Flaky selector false-positives under variable network conditions",
+        "DOM assertion race conditions on asynchronous hydration"
+      ]
+    },
+    {
+      "path": "/overview",
+      "name": "Executive Dashboard Overview",
+      "description": "High-level metrics dashboard showing total test counts, pass percentage rate, open defects, average step latency, recent project cards, and quick actions.",
+      "criticality": "high",
+      "interactiveElements": [
+        { "type": "button", "selector": "button:has-text('Execute Suite')", "label": "Execute Suite Hero Button", "purpose": "Quick-launches test execution" },
+        { "type": "button", "selector": "button:has-text('Defect Triage')", "label": "Defect Triage Quick Action", "purpose": "Navigates to defects view" },
+        { "type": "button", "selector": "button:has-text('Traceability')", "label": "Traceability Quick Action", "purpose": "Navigates to requirements matrix" },
+        { "type": "button", "selector": "button:has-text('Export QA PDF')", "label": "PDF Modal Quick Action", "purpose": "Opens complete PDF export configuration modal" }
+      ],
+      "potentialRisks": [
+        "Stale metric aggregation across asynchronously updated projects",
+        "Discrepancies in defect counters upon status transitions"
+      ]
+    },
+    {
+      "path": "/defects",
+      "name": "Defect Investigation & Root Cause Triage",
+      "description": "Categorizes test failures into Product Defects, Test Script Issues, and Environment Issues, providing AI/heuristic root cause analyses and code patches.",
+      "criticality": "high",
+      "interactiveElements": [
+        { "type": "input", "selector": "input[placeholder*='Search defects']", "label": "Defect Search", "purpose": "Filters defects by ID, title, or requirement" },
+        { "type": "select", "selector": "select#defect-status-select", "label": "Status Transition Dropdown", "purpose": "Updates defect status between new, confirmed, in_progress, and fixed" },
+        { "type": "button", "selector": "button:has-text('Copy Patch')", "label": "Copy Patch Button", "purpose": "Copies suggested remediation code snippet to clipboard" }
+      ],
+      "potentialRisks": [
+        "Misclassification of test harness flakiness as product defects",
+        "Unvalidated code patches applied without unit testing"
+      ]
+    },
+    {
+      "path": "/requirements",
+      "name": "Requirements & ISO-29148 Traceability Matrix",
+      "description": "Bidirectional traceability matrix mapping customer user stories and specifications to test case coverage and active defect tickets.",
+      "criticality": "high",
+      "interactiveElements": [
+        { "type": "input", "selector": "input[placeholder*='Search requirements']", "label": "Requirement Search", "purpose": "Filters requirements by code, title, or module" },
+        { "type": "button", "selector": "button:has-text('Coverage Gaps')", "label": "Coverage Gaps Filter", "purpose": "Isolates requirements with uncovered or partial test status" }
+      ],
+      "potentialRisks": [
+        "Orphaned test cases lacking formal requirement identifiers",
+        "Incomplete coverage visibility on newly added features"
+      ]
+    },
+    {
+      "path": "/settings",
+      "name": "Platform & Runner Configuration",
+      "description": "Execution parameters, Playwright browser engine selection (Chromium, Firefox, WebKit), step timeouts, assertion thresholds, and data reset.",
+      "criticality": "medium",
+      "interactiveElements": [
+        { "type": "select", "selector": "select#browser-engine", "label": "Browser Engine Selector", "purpose": "Sets default Playwright browser" },
+        { "type": "input", "selector": "input#action-timeout", "label": "Action Timeout Field", "purpose": "Sets milliseconds threshold for click/fill" },
+        { "type": "button", "selector": "button:has-text('Save Settings')", "label": "Save Settings Button", "purpose": "Persists runner preferences in localStorage" },
+        { "type": "button", "selector": "button:has-text('Reset All Data')", "label": "Reset Data Button", "purpose": "Clears local storage test data" }
+      ],
+      "potentialRisks": [
+        "Excessively short timeouts triggering spurious false-negative test failures",
+        "Accidental data loss via unconfirmed reset trigger"
+      ]
+    }
+  ],
+  "boundaryScenarios": [
+    "Submitting URL with leading/trailing whitespaces, missing protocol, or unresolvable top-level domain",
+    "Bulk approving an empty test cases array without throwing null reference exceptions",
+    "Entering extreme numeric timeout values (0ms or 999999ms) in Runner Settings",
+    "Uploading zero-byte or corrupt non-ZIP binary file into the project onboarding dropzone",
+    "Submitting a 500-character project identifier name to verify UI truncation and layout resilience",
+    "Rapid consecutive double-clicks on 'Start Application Analysis' and 'Execute Suite' buttons",
+    "Attempting to proceed from Test Case Review to Execution when zero test cases are approved"
+  ],
+  "recommendedTestSuites": [
+    {
+      "name": "Critical End-to-End User Journeys",
+      "description": "Full end-to-end user workflows from project creation to analysis, review, execution, triage, and reporting.",
+      "estimatedCases": 6,
+      "priority": "critical-path"
+    },
+    {
+      "name": "Core Functional Workflows",
+      "description": "Validation of primary product features: sample app loading, test step editing, search modal, and traceability.",
+      "estimatedCases": 6,
+      "priority": "functional"
+    },
+    {
+      "name": "Positive Validation Scenarios",
+      "description": "Verified successful inputs, protocol auto-formatting, status transitions, and report exports.",
+      "estimatedCases": 4,
+      "priority": "smoke"
+    },
+    {
+      "name": "Negative & Error Handling Scenarios",
+      "description": "Invalid URLs, malformed data, unapproved execution gating, and server 500 recovery.",
+      "estimatedCases": 4,
+      "priority": "negative"
+    },
+    {
+      "name": "Required Field & Form Validation",
+      "description": "Enforcement of mandatory target URL, project name, and step action/target inputs.",
+      "estimatedCases": 3,
+      "priority": "boundary"
+    },
+    {
+      "name": "Input Format & Data Sanitization",
+      "description": "Handling of special characters, script tags, URL schemes, and phone number lengths.",
+      "estimatedCases": 3,
+      "priority": "boundary"
+    },
+    {
+      "name": "Boundary Value & Stress Testing",
+      "description": "Max length strings, extreme timeouts, rapid clicking, and empty collections.",
+      "estimatedCases": 3,
+      "priority": "edge-cases"
+    },
+    {
+      "name": "Navigation & Browser State Integrity",
+      "description": "Keyboard shortcuts, route switching, sidebar collapsing, and localStorage reload.",
+      "estimatedCases": 3,
+      "priority": "regression"
+    },
+    {
+      "name": "Authentication & Test Credential Guard",
+      "description": "Secure handling of test credentials, toggle visibility, and masked password storage.",
+      "estimatedCases": 2,
+      "priority": "functional"
+    },
+    {
+      "name": "Approval Gating & Access Control",
+      "description": "Strict enforcement of human review signoff before dispatching execution.",
+      "estimatedCases": 2,
+      "priority": "critical-path"
+    },
+    {
+      "name": "API Success & Gateway Fallback Handling",
+      "description": "Resilience of /api/qa/* endpoints when Gemini API key is missing or invalid.",
+      "estimatedCases": 2,
+      "priority": "regression"
+    },
+    {
+      "name": "Loading, Empty & Error UI States",
+      "description": "Clean presentation during asynchronous scanning, empty projects, and failed runs.",
+      "estimatedCases": 2,
+      "priority": "functional"
+    },
+    {
+      "name": "Concurrency & Duplicate Action Prevention",
+      "description": "Button disabling during ongoing analysis or execution to prevent race conditions.",
+      "estimatedCases": 1,
+      "priority": "boundary"
+    },
+    {
+      "name": "Data Consistency & Metric Calculations",
+      "description": "Mathematical verification of pass rate, defect counts, and coverage percentages.",
+      "estimatedCases": 1,
+      "priority": "functional"
+    },
+    {
+      "name": "Multi-Step Workflow State Transitions",
+      "description": "Integrity of project session payload through steps 1 -> 2 -> 3 -> 4.",
+      "estimatedCases": 1,
+      "priority": "critical-path"
+    },
+    {
+      "name": "File Upload & ZIP Extraction Validation",
+      "description": "Client-side JSZip archive inspection, language detection, and file limit enforcement.",
+      "estimatedCases": 1,
+      "priority": "functional"
+    },
+    {
+      "name": "Search & Multi-Dimensional Filtering",
+      "description": "Real-time query filtering across test cases, requirements, defects, and projects.",
+      "estimatedCases": 1,
+      "priority": "functional"
+    }
+  ],
+  "generatedAt": "2026-10-27T08:55:00.000Z",
+  "seededTestCases": [
+    {
+      "test_id": "AQA-001",
+      "requirement_id": "REQ-AQA-ONBOARD-01",
+      "title": "Onboard Valid Web Application URL and Verify Route Discovery",
+      "priority": "critical",
+      "category": "critical-path",
+      "preconditions": ["User navigates to AutoQA Studio root URL", "Workflow step is New Project"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open AutoQA Studio application" },
+        { "action": "assert_visible", "target": "#target-url-input", "description": "Verify application URL input is rendered" },
+        { "action": "fill", "target": "#target-url-input", "value": "https://demo.novashop-store.io", "description": "Enter valid HTTPS target application URL" },
+        { "action": "fill", "target": "#project-name-input", "value": "NovaShop E-Commerce", "description": "Enter project identifier name" },
+        { "action": "click", "target": "button[type='submit']", "description": "Click Start Application Analysis button" },
+        { "action": "assert_visible", "target": "text=Step 2 of 4: Application Discovery", "description": "Confirm navigation to Step 2 Application Analysis screen" },
+        { "action": "assert_visible", "target": "button:has-text('Generate Test Cases')", "description": "Verify Generate Test Cases action button is visible" }
+      ],
+      "expected_result": "Target application is validated, saved to project session, and route discovery screen renders with discovered application structure",
+      "status": "pending_review",
+      "reviewNotes": "Core end-to-end onboarding journey verification."
+    },
+    {
+      "test_id": "AQA-002",
+      "requirement_id": "REQ-AQA-ANALYZE-02",
+      "title": "Synthesize Test Suite and Transition to Review Gate",
+      "priority": "critical",
+      "category": "critical-path",
+      "preconditions": ["Application Analysis completed in Step 2", "Discovered routes present in session"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open workspace on active analysis project" },
+        { "action": "click", "target": "button:has-text('Generate Test Cases')", "description": "Trigger test case synthesis" },
+        { "action": "assert_visible", "target": "text=Step 3 of 4: QA Review & Approval Gate", "description": "Verify progression to Step 3 Review screen" },
+        { "action": "assert_visible", "target": "button:has-text('Approve All')", "description": "Ensure bulk approval control is mounted" }
+      ],
+      "expected_result": "Test generator synthesizes deterministic test cases and navigates user to human signoff gate",
+      "status": "pending_review",
+      "reviewNotes": "Validates autonomous test generation and review gating transition."
+    },
+    {
+      "test_id": "AQA-003",
+      "requirement_id": "REQ-AQA-GATE-03",
+      "title": "Approve Test Cases and Submit to Execution Runner",
+      "priority": "critical",
+      "category": "critical-path",
+      "preconditions": ["Test cases synthesized in Step 3", "Status initially pending_review"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Access test case review gate" },
+        { "action": "click", "target": "button:has-text('Approve All')", "description": "Click Approve All button to sign off suite" },
+        { "action": "assert_text", "target": "button:has-text('Proceed to Execution')", "value": "Proceed to Execution", "description": "Confirm Proceed to Execution button is enabled" },
+        { "action": "click", "target": "button:has-text('Proceed to Execution')", "description": "Submit approved suite to runner" },
+        { "action": "assert_visible", "target": "text=Step 4 of 4: Test Execution & Evidence", "description": "Verify arrival at Step 4 Execution workspace" }
+      ],
+      "expected_result": "All test cases update to approved status and execution submission unlocks without blocker warnings",
+      "status": "pending_review",
+      "reviewNotes": "Strict verification of human-in-the-loop signoff enforcement."
+    },
+    {
+      "test_id": "AQA-004",
+      "requirement_id": "REQ-AQA-EXEC-04",
+      "title": "Execute Automated Suite and Verify Real-Time Telemetry",
+      "priority": "critical",
+      "category": "critical-path",
+      "preconditions": ["Approved test cases ready on Step 4 screen"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Access execution workspace" },
+        { "action": "click", "target": "button:has-text('Run Test Suite')", "description": "Initiate automated test execution run" },
+        { "action": "assert_visible", "target": "text=Completed", "description": "Verify test run state transitions to completed" },
+        { "action": "assert_visible", "target": "button:has-text('Export JSON Report')", "description": "Verify report export actions appear upon completion" }
+      ],
+      "expected_result": "Playwright preview runner executes test cases, records step durations, logs, and displays pass/fail badges",
+      "status": "pending_review",
+      "reviewNotes": "End-to-end execution lifecycle verification."
+    },
+    {
+      "test_id": "AQA-005",
+      "requirement_id": "REQ-AQA-TRIAGE-05",
+      "title": "Investigate Injected Failure and Triage Root Cause",
+      "priority": "critical",
+      "category": "critical-path",
+      "preconditions": ["Test execution completed with simulated product bug failure"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Access execution workspace with failed run" },
+        { "action": "click", "target": "button:has-text('Root Cause Triage')", "description": "Open triage tab for failing test step" },
+        { "action": "assert_visible", "target": "text=PRODUCT_DEFECT", "description": "Assert failure is classified as PRODUCT_DEFECT" },
+        { "action": "assert_visible", "target": "button:has-text('Copy Patch')", "description": "Verify suggested remediation code patch is visible" }
+      ],
+      "expected_result": "Failure triage engine accurately classifies defect, identifies faulty step, and generates code patch",
+      "status": "pending_review",
+      "reviewNotes": "Validates Agent 4 failure diagnosis and RCA categorization."
+    },
+    {
+      "test_id": "AQA-006",
+      "requirement_id": "REQ-AQA-EXPORT-06",
+      "title": "Export Standalone HTML and JSON Execution Reports",
+      "priority": "critical",
+      "category": "critical-path",
+      "preconditions": ["Test run finished with valid test result records"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Access completed test execution view" },
+        { "action": "click", "target": "button:has-text('Export JSON Report')", "description": "Click Export JSON Report" },
+        { "action": "click", "target": "button:has-text('Export HTML Report')", "description": "Click Export HTML Report" },
+        { "action": "assert_visible", "target": "text=Report generated", "description": "Ensure report generation triggers without error" }
+      ],
+      "expected_result": "JSON and HTML reports are formatted according to ISO standards and downloaded for CI archiving",
+      "status": "pending_review",
+      "reviewNotes": "Report exporter service integrity test."
+    },
+    {
+      "test_id": "AQA-007",
+      "requirement_id": "REQ-AQA-SAMPLE-07",
+      "title": "Load Pre-Configured Sample Target (Flipkart E-Commerce)",
+      "priority": "high",
+      "category": "functional",
+      "preconditions": ["User on Step 1 New Project onboarding screen"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Navigate to onboarding screen" },
+        { "action": "click", "target": "div:has-text('Flipkart E-Commerce')", "description": "Click Flipkart 1-click sample card" },
+        { "action": "assert_visible", "target": "text=Step 3 of 4: QA Review & Approval Gate", "description": "Confirm direct routing to seeded test review" },
+        { "action": "assert_visible", "target": "text=FK-001", "description": "Verify presence of Flipkart mobile auth test FK-001" },
+        { "action": "assert_visible", "target": "text=8722451115", "description": "Verify login mobile number 8722451115 is displayed" }
+      ],
+      "expected_result": "Flipkart sample project loads with 4 verified test cases (FK-001 to FK-004) ready for immediate review",
+      "status": "pending_review",
+      "reviewNotes": "Functional verification of 1-click sample target seeding."
+    },
+    {
+      "test_id": "AQA-008",
+      "requirement_id": "REQ-AQA-SAMPLE-08",
+      "title": "Load Pre-Configured Sample Target (NovaShop Modern Store)",
+      "priority": "high",
+      "category": "functional",
+      "preconditions": ["User on Step 1 New Project onboarding screen"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Navigate to onboarding screen" },
+        { "action": "click", "target": "div:has-text('NovaShop Modern Store')", "description": "Click NovaShop sample card" },
+        { "action": "assert_visible", "target": "text=Step 3 of 4: QA Review & Approval Gate", "description": "Confirm progression to review gate" },
+        { "action": "assert_visible", "target": "text=ECOM-001", "description": "Verify presence of ECOM-001 test case" }
+      ],
+      "expected_result": "NovaShop e-commerce sample loads with seeded catalog, coupon discount, and checkout test cases",
+      "status": "pending_review",
+      "reviewNotes": "Functional check for NovaShop seed data hydration."
+    },
+    {
+      "test_id": "AQA-009",
+      "requirement_id": "REQ-AQA-EDIT-09",
+      "title": "Edit Test Case Steps and Persist Modified Assertions",
+      "priority": "high",
+      "category": "functional",
+      "preconditions": ["User on Step 3 Test Case Review screen", "At least 1 test case visible"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open test case review view" },
+        { "action": "click", "target": "button:has-text('Edit Test')", "description": "Click Edit Test button on active test case" },
+        { "action": "fill", "target": "input[placeholder*='Target selector']", "value": "#custom-cart-badge", "description": "Modify selector target in step form" },
+        { "action": "click", "target": "button:has-text('Save Changes')", "description": "Save test case modifications" },
+        { "action": "assert_visible", "target": "text=#custom-cart-badge", "description": "Verify updated selector is displayed in step list" }
+      ],
+      "expected_result": "User edits are applied to the active test case and preserved in project session state",
+      "status": "pending_review",
+      "reviewNotes": "Validates inline test step editing and state mutation."
+    },
+    {
+      "test_id": "AQA-010",
+      "requirement_id": "REQ-AQA-SEARCH-10",
+      "title": "Trigger Global Search Modal via Cmd+K and Filter Entities",
+      "priority": "high",
+      "category": "functional",
+      "preconditions": ["AutoQA Studio open on any section"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open platform shell" },
+        { "action": "click", "target": "button[title*='Search']", "description": "Click Search toolbar button" },
+        { "action": "assert_visible", "target": "input[placeholder*='Search test cases, defects, or projects']", "description": "Verify search modal mounted" },
+        { "action": "fill", "target": "input[placeholder*='Search test cases, defects, or projects']", "value": "checkout", "description": "Type search term 'checkout'" },
+        { "action": "assert_visible", "target": "div:has-text('Checkout')", "description": "Verify filtered search results render" }
+      ],
+      "expected_result": "Global search opens smoothly, indexes all entities, and filters live results based on keystrokes",
+      "status": "pending_review",
+      "reviewNotes": "Validates cross-entity global search functionality."
+    },
+    {
+      "test_id": "AQA-011",
+      "requirement_id": "REQ-AQA-THEME-11",
+      "title": "Toggle Dark and Light Visual Themes with CSS Variable Synchronization",
+      "priority": "medium",
+      "category": "functional",
+      "preconditions": ["Application loaded with default dark theme (#0B1020)"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Load application" },
+        { "action": "assert_visible", "target": "html.dark", "description": "Ensure document root contains dark class by default" },
+        { "action": "click", "target": "button[aria-label*='mode']", "description": "Click theme toggle button" },
+        { "action": "assert_visible", "target": "html.light", "description": "Assert document root transitions to light class" },
+        { "action": "click", "target": "button[aria-label*='mode']", "description": "Click theme toggle again" },
+        { "action": "assert_visible", "target": "html.dark", "description": "Assert document root restores dark class" }
+      ],
+      "expected_result": "Theme switches cleanly between dark (#0B1020) and light modes, persisting setting to localStorage",
+      "status": "pending_review",
+      "reviewNotes": "Validates non-pill dark-first design system adherence."
+    },
+    {
+      "test_id": "AQA-012",
+      "requirement_id": "REQ-AQA-TRACE-12",
+      "title": "Filter Requirements Traceability Matrix by Coverage Gaps",
+      "priority": "high",
+      "category": "functional",
+      "preconditions": ["User navigates to Requirements section in sidebar"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open platform" },
+        { "action": "click", "target": "button:has-text('Requirements')", "description": "Click Requirements in left navigation" },
+        { "action": "assert_visible", "target": "text=Traceability Matrix", "description": "Confirm arrival on Requirements view" },
+        { "action": "click", "target": "button:has-text('Coverage Gaps')", "description": "Click Coverage Gaps filter toggle" },
+        { "action": "assert_visible", "target": "text=Uncovered", "description": "Verify only uncovered or partial requirements are shown" }
+      ],
+      "expected_result": "Traceability matrix isolates uncovered requirements and updates coverage percentage metric accurately",
+      "status": "pending_review",
+      "reviewNotes": "Validates ISO-29148 requirements traceability filtering."
+    },
+    {
+      "test_id": "AQA-013",
+      "requirement_id": "REQ-AQA-URL-13",
+      "title": "Auto-Format Bare Domain Names into Valid HTTPS Protocol URLs",
+      "priority": "high",
+      "category": "functional",
+      "preconditions": ["User on Step 1 New Project onboarding form"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open onboarding form" },
+        { "action": "fill", "target": "#target-url-input", "value": "app.staging-cluster.io", "description": "Enter domain without protocol prefix" },
+        { "action": "click", "target": "button[type='submit']", "description": "Submit onboarding form" },
+        { "action": "assert_visible", "target": "text=Step 2 of 4", "description": "Verify form accepts formatted URL without protocol error" }
+      ],
+      "expected_result": "URL validation utility automatically prepends https:// to valid bare domains and proceeds to Step 2",
+      "status": "pending_review",
+      "reviewNotes": "Validates protocol auto-formatting positive test."
+    },
+    {
+      "test_id": "AQA-014",
+      "requirement_id": "REQ-AQA-LOCAL-14",
+      "title": "Support Localhost Dev Server URLs (http://localhost:3000)",
+      "priority": "high",
+      "category": "functional",
+      "preconditions": ["User on Step 1 New Project onboarding form"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open onboarding form" },
+        { "action": "fill", "target": "#target-url-input", "value": "http://localhost:3000", "description": "Enter local developer server URL" },
+        { "action": "select", "target": "#environment-select", "value": "local", "description": "Select Local Dev Server environment" },
+        { "action": "click", "target": "button[type='submit']", "description": "Submit form" },
+        { "action": "assert_visible", "target": "text=Step 2 of 4", "description": "Confirm successful transition to analysis" }
+      ],
+      "expected_result": "Localhost development URLs with port numbers are validated and accepted for local testing",
+      "status": "pending_review",
+      "reviewNotes": "Validates local developer loop support."
+    },
+    {
+      "test_id": "AQA-015",
+      "requirement_id": "REQ-AQA-STATUS-15",
+      "title": "Transition Defect Status from New to In Progress and Fixed",
+      "priority": "high",
+      "category": "functional",
+      "preconditions": ["User on Defects & Triage section", "DEF-104 is selected"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open platform" },
+        { "action": "click", "target": "button:has-text('Defects')", "description": "Navigate to Defects view" },
+        { "action": "click", "target": "div:has-text('DEF-104')", "description": "Select defect DEF-104" },
+        { "action": "click", "target": "button:has-text('Start Investigation')", "description": "Change status to In Progress" },
+        { "action": "assert_visible", "target": "span:has-text('In Progress')", "description": "Verify In Progress badge is displayed" },
+        { "action": "click", "target": "button:has-text('Mark Fixed')", "description": "Mark defect as resolved" },
+        { "action": "assert_visible", "target": "span:has-text('Fixed')", "description": "Verify Fixed status badge appears" }
+      ],
+      "expected_result": "Defect status transitions correctly and updates open defect counters on the dashboard",
+      "status": "pending_review",
+      "reviewNotes": "Validates defect lifecycle management."
+    },
+    {
+      "test_id": "AQA-016",
+      "requirement_id": "REQ-AQA-EXPORT-16",
+      "title": "Generate Playwright TypeScript Specification Code Snippet",
+      "priority": "high",
+      "category": "functional",
+      "preconditions": ["User on Reports section with test cases available"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open platform" },
+        { "action": "click", "target": "button:has-text('Reports')", "description": "Navigate to Reports view" },
+        { "action": "click", "target": "button:has-text('Playwright TS')", "description": "Select Playwright TS format preview" },
+        { "action": "assert_visible", "target": "text=import { test, expect } from '@playwright/test'", "description": "Verify generated Playwright TS header" },
+        { "action": "click", "target": "button:has-text('Copy Code')", "description": "Click Copy Code button" },
+        { "action": "assert_visible", "target": "text=Copied", "description": "Verify copy feedback toast/confirmation appears" }
+      ],
+      "expected_result": "Executable Playwright TypeScript code is compiled with proper imports, web-first assertions, and copied to clipboard",
+      "status": "pending_review",
+      "reviewNotes": "Validates Playwright code generation compiler."
+    },
+    {
+      "test_id": "AQA-017",
+      "requirement_id": "REQ-AQA-NEG-17",
+      "title": "Reject Empty Target URL Submission with Inline Error Banner",
+      "priority": "critical",
+      "category": "negative",
+      "preconditions": ["User on Step 1 New Project onboarding form"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open onboarding form" },
+        { "action": "fill", "target": "#target-url-input", "value": "", "description": "Clear target URL input field" },
+        { "action": "click", "target": "button[type='submit']", "description": "Attempt form submission" },
+        { "action": "assert_visible", "target": "text=Please enter a target web application URL", "description": "Assert validation error message renders" }
+      ],
+      "expected_result": "Form submission is blocked and inline error message guides user to supply a valid URL",
+      "status": "pending_review",
+      "reviewNotes": "Negative testing for missing required URL input."
+    },
+    {
+      "test_id": "AQA-018",
+      "requirement_id": "REQ-AQA-NEG-18",
+      "title": "Reject Malformed URL Strings Without Top-Level Domain",
+      "priority": "high",
+      "category": "negative",
+      "preconditions": ["User on Step 1 New Project onboarding form"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open onboarding form" },
+        { "action": "fill", "target": "#target-url-input", "value": "invalidurlwithoutdot", "description": "Enter malformed string lacking domain dot" },
+        { "action": "click", "target": "button[type='submit']", "description": "Attempt submission" },
+        { "action": "assert_visible", "target": "text=valid domain name", "description": "Verify domain validation error is displayed" }
+      ],
+      "expected_result": "URL parser identifies missing hostname delimiter and displays informative error banner",
+      "status": "pending_review",
+      "reviewNotes": "Negative testing for invalid domain structure."
+    },
+    {
+      "test_id": "AQA-019",
+      "requirement_id": "REQ-AQA-NEG-19",
+      "title": "Block Execution Submission When All Test Cases Are Rejected",
+      "priority": "critical",
+      "category": "negative",
+      "preconditions": ["User on Step 3 Test Case Review screen"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Access test case review gate" },
+        { "action": "click", "target": "button:has-text('Reject')", "description": "Reject test cases" },
+        { "action": "assert_visible", "target": "button:has-text('Proceed to Execution'):disabled", "description": "Confirm Proceed button is disabled" },
+        { "action": "assert_visible", "target": "text=No approved test cases available for execution", "description": "Verify gating warning banner is displayed" }
+      ],
+      "expected_result": "Human review gating barrier prevents test execution until at least one test case has been approved",
+      "status": "pending_review",
+      "reviewNotes": "Negative testing enforcing zero-approved execution block."
+    },
+    {
+      "test_id": "AQA-020",
+      "requirement_id": "REQ-AQA-NEG-20",
+      "title": "Gracefully Handle Server API Failure with Fallback Engine",
+      "priority": "high",
+      "category": "negative",
+      "preconditions": ["Target URL analysis invoked when backend Gemini API key is unset"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Initiate analysis" },
+        { "action": "fill", "target": "#target-url-input", "value": "https://demo.novashop-store.io", "description": "Enter target URL" },
+        { "action": "click", "target": "button[type='submit']", "description": "Start analysis" },
+        { "action": "assert_visible", "target": "text=Demo Heuristic Analysis Adapter", "description": "Verify fallback engine badge is clearly displayed" }
+      ],
+      "expected_result": "System does not crash or display raw 500 error; cleanly falls back to deterministic heuristic engine with honest disclosure",
+      "status": "pending_review",
+      "reviewNotes": "Negative boundary resilience test for backend API unavailability."
+    },
+    {
+      "test_id": "AQA-021",
+      "requirement_id": "REQ-AQA-FORM-21",
+      "title": "Enforce Required Fields in Custom Route Creation Form",
+      "priority": "medium",
+      "category": "boundary",
+      "preconditions": ["User on Step 2 Application Analysis screen"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Navigate to analysis screen" },
+        { "action": "click", "target": "button:has-text('Add Custom Route')", "description": "Open Add Route dialog" },
+        { "action": "fill", "target": "input[placeholder*='Route Path']", "value": "", "description": "Leave path input empty" },
+        { "action": "click", "target": "button:has-text('Confirm Add Route')", "description": "Attempt to save route" },
+        { "action": "assert_visible", "target": "input[placeholder*='Route Path']:invalid", "description": "Verify form blocks empty route path submission" }
+      ],
+      "expected_result": "Custom route creation requires non-empty path and name inputs before committing to the route tree",
+      "status": "pending_review",
+      "reviewNotes": "Required field validation check on dynamic route form."
+    },
+    {
+      "test_id": "AQA-022",
+      "requirement_id": "REQ-AQA-FORM-22",
+      "title": "Require Non-Empty Action and Target on Test Step Addition",
+      "priority": "medium",
+      "category": "boundary",
+      "preconditions": ["User on Step 3 Test Step Editor modal"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open test case editor" },
+        { "action": "click", "target": "button:has-text('Add Step')", "description": "Add new step row" },
+        { "action": "fill", "target": "input[placeholder*='target selector']", "value": "", "description": "Clear step target selector" },
+        { "action": "click", "target": "button:has-text('Save Changes')", "description": "Attempt save" },
+        { "action": "assert_visible", "target": "text=Target selector cannot be empty", "description": "Verify validation prevents step without target selector" }
+      ],
+      "expected_result": "Test case editor rejects steps lacking target locators to protect test suite executable stability",
+      "status": "pending_review",
+      "reviewNotes": "Validation test for step model schema integrity."
+    },
+    {
+      "test_id": "AQA-023",
+      "requirement_id": "REQ-AQA-FORM-23",
+      "title": "Validate Action Timeout Numeric Bounds in Runner Settings",
+      "priority": "medium",
+      "category": "boundary",
+      "preconditions": ["User on Settings view"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open platform" },
+        { "action": "click", "target": "button:has-text('Settings')", "description": "Navigate to Settings" },
+        { "action": "fill", "target": "input#action-timeout", "value": "-500", "description": "Enter negative timeout" },
+        { "action": "click", "target": "button:has-text('Save Settings')", "description": "Save settings" },
+        { "action": "assert_visible", "target": "text=Timeout must be greater than 0", "description": "Verify validation bounds warning appears" }
+      ],
+      "expected_result": "Runner settings rejects negative or zero timeouts and preserves default safe threshold (5000ms)",
+      "status": "pending_review",
+      "reviewNotes": "Numeric input boundary test in settings."
+    },
+    {
+      "test_id": "AQA-024",
+      "requirement_id": "REQ-AQA-FORMAT-24",
+      "title": "Sanitize Dangerous Script Tags in Project Name Input",
+      "priority": "critical",
+      "category": "boundary",
+      "preconditions": ["User on Step 1 New Project onboarding form"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open onboarding form" },
+        { "action": "fill", "target": "#project-name-input", "value": "<script>alert('xss')</script> App", "description": "Enter XSS injection string in project name" },
+        { "action": "click", "target": "button[type='submit']", "description": "Submit form" },
+        { "action": "assert_visible", "target": "h1:has-text('App')", "description": "Verify rendered title safely escapes HTML tags without executing script" }
+      ],
+      "expected_result": "React DOM rendering safely escapes HTML entities, preventing script execution in headers and breadcrumbs",
+      "status": "pending_review",
+      "reviewNotes": "Security input sanitization and XSS boundary check."
+    },
+    {
+      "test_id": "AQA-025",
+      "requirement_id": "REQ-AQA-FORMAT-25",
+      "title": "Reject Whitespace-Only Target URL Inputs",
+      "priority": "high",
+      "category": "negative",
+      "preconditions": ["User on Step 1 New Project onboarding form"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open onboarding form" },
+        { "action": "fill", "target": "#target-url-input", "value": "     ", "description": "Enter spaces only" },
+        { "action": "click", "target": "button[type='submit']", "description": "Submit form" },
+        { "action": "assert_visible", "target": "text=Please enter a target web application URL", "description": "Verify whitespace is trimmed and rejected" }
+      ],
+      "expected_result": "Input trimmer detects whitespace-only strings and rejects submission with helpful guidance",
+      "status": "pending_review",
+      "reviewNotes": "Format validation boundary test."
+    },
+    {
+      "test_id": "AQA-026",
+      "requirement_id": "REQ-AQA-FORMAT-26",
+      "title": "Validate 10-Digit Indian Mobile Phone Format on Flipkart Flow",
+      "priority": "high",
+      "category": "negative",
+      "preconditions": ["Flipkart sample project loaded in execution sandbox"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open sandbox view" },
+        { "action": "fill", "target": "input[data-testid='mobile-login-input']", "value": "872245111", "description": "Enter 9 digits missing final number" },
+        { "action": "click", "target": "button[data-testid='request-otp-btn']", "description": "Click Request OTP" },
+        { "action": "assert_visible", "target": "div[data-testid='mobile-error-message']", "description": "Confirm mobile format error is displayed" }
+      ],
+      "expected_result": "Validation rejects incomplete phone numbers and requires exact 10 digits before dispatching OTP",
+      "status": "pending_review",
+      "reviewNotes": "Phone number format verification test."
+    },
+    {
+      "test_id": "AQA-027",
+      "requirement_id": "REQ-AQA-BND-27",
+      "title": "Handle Maximum 500-Character Boundary String in Project Name",
+      "priority": "medium",
+      "category": "boundary",
+      "preconditions": ["User on Step 1 New Project onboarding form"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open onboarding form" },
+        { "action": "fill", "target": "#project-name-input", "value": "AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-AutoQA-Enterprise-Platform-", "description": "Fill high boundary project name string (486 chars)" },
+        { "action": "click", "target": "button[type='submit']", "description": "Submit form" },
+        { "action": "assert_visible", "target": "text=Step 2 of 4", "description": "Ensure UI truncates gracefully with CSS truncate without crashing" }
+      ],
+      "expected_result": "Long boundary string is accepted and rendered with text truncation ellipses without breaking sidebar width",
+      "status": "pending_review",
+      "reviewNotes": "String length boundary and layout resilience test."
+    },
+    {
+      "test_id": "AQA-028",
+      "requirement_id": "REQ-AQA-BND-28",
+      "title": "Bulk Approve Operation on Zero Test Cases Does Not Throw Exception",
+      "priority": "medium",
+      "category": "boundary",
+      "preconditions": ["User on Step 3 Test Case Review with filtered empty result set"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open review screen" },
+        { "action": "fill", "target": "input[placeholder*='Search test cases']", "value": "non-existent-filter-token-999", "description": "Filter down to 0 matching tests" },
+        { "action": "click", "target": "button:has-text('Approve All')", "description": "Trigger bulk approve" },
+        { "action": "assert_visible", "target": "text=No test cases match your filter", "description": "Verify application handles empty array without error" }
+      ],
+      "expected_result": "Array mapping operates safely on empty lists without throwing runtime unhandled TypeError exceptions",
+      "status": "pending_review",
+      "reviewNotes": "Boundary test on empty collection operations."
+    },
+    {
+      "test_id": "AQA-029",
+      "requirement_id": "REQ-AQA-BND-29",
+      "title": "Rapid Repeated Double-Clicks on Action Buttons Do Not Duplicate Requests",
+      "priority": "medium",
+      "category": "boundary",
+      "preconditions": ["User on Step 1 New Project onboarding form"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open onboarding form" },
+        { "action": "click", "target": "button[type='submit']", "description": "Click submit button" },
+        { "action": "click", "target": "button[type='submit']", "description": "Immediately click submit button a second time" },
+        { "action": "assert_visible", "target": "button[type='submit']:disabled", "description": "Verify button enters disabled state to prevent race condition" }
+      ],
+      "expected_result": "Loading state disables interactive buttons, preventing redundant parallel API calls or state corruption",
+      "status": "pending_review",
+      "reviewNotes": "Concurrency and duplicate submission barrier test."
+    },
+    {
+      "test_id": "AQA-030",
+      "requirement_id": "REQ-AQA-NAV-30",
+      "title": "Keyboard Shortcuts Navigation (Keys 1 Through 5)",
+      "priority": "medium",
+      "category": "functional",
+      "preconditions": ["User in AutoQA Studio with no active input focus"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Load application shell" },
+        { "action": "click", "target": "body", "description": "Ensure body has focus" },
+        { "action": "wait", "target": "body", "description": "Press key '5' to switch to Overview" },
+        { "action": "assert_visible", "target": "text=Projects & Test Targets", "description": "Verify arrival on Overview section" },
+        { "action": "wait", "target": "body", "description": "Press key '1' to return to Step 1" },
+        { "action": "assert_visible", "target": "text=Step 1 of 4: Project Onboarding", "description": "Verify arrival back on Step 1" }
+      ],
+      "expected_result": "Global keyboard event listeners cleanly navigate between wizard steps and dashboard views",
+      "status": "pending_review",
+      "reviewNotes": "Validates power-user keyboard accessibility."
+    },
+    {
+      "test_id": "AQA-031",
+      "requirement_id": "REQ-AQA-NAV-31",
+      "title": "Collapse and Expand Sidebar Navigation Drawer on Desktop",
+      "priority": "low",
+      "category": "functional",
+      "preconditions": ["Application rendered on desktop viewport (>768px)"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open application" },
+        { "action": "assert_visible", "target": "aside.w-64", "description": "Assert sidebar width is 256px expanded" },
+        { "action": "click", "target": "button[aria-label='Collapse sidebar']", "description": "Click collapse chevron button" },
+        { "action": "assert_visible", "target": "aside.w-16", "description": "Assert sidebar width shrinks to 64px compact rail" },
+        { "action": "click", "target": "button[aria-label='Expand sidebar']", "description": "Click expand chevron button" },
+        { "action": "assert_visible", "target": "aside.w-64", "description": "Assert sidebar restores to 256px expanded" }
+      ],
+      "expected_result": "Sidebar smoothly toggles width, adjusts navigation item titles into tooltips, and stores preference",
+      "status": "pending_review",
+      "reviewNotes": "Desktop navigation drawer responsiveness test."
+    },
+    {
+      "test_id": "AQA-032",
+      "requirement_id": "REQ-AQA-PERSIST-32",
+      "title": "Persist Active Project Session Data Across Browser Page Reload",
+      "priority": "critical",
+      "category": "functional",
+      "preconditions": ["Project created and test cases approved in local session"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open workspace" },
+        { "action": "assert_visible", "target": "text=Flipkart E-Commerce", "description": "Confirm active project is Flipkart" },
+        { "action": "navigate", "target": "/", "description": "Simulate browser page refresh" },
+        { "action": "assert_visible", "target": "text=Flipkart E-Commerce", "description": "Assert active project is restored from localStorage" },
+        { "action": "assert_visible", "target": "text=FK-001", "description": "Assert approved test cases are rehydrated from storage" }
+      ],
+      "expected_result": "Project metadata, analysis findings, and reviewed test cases persist across browser refresh cycles",
+      "status": "pending_review",
+      "reviewNotes": "Validates client storage serialization and session restoration."
+    },
+    {
+      "test_id": "AQA-033",
+      "requirement_id": "REQ-AQA-AUTH-33",
+      "title": "Toggle Test Credentials Form and Mask Password Values",
+      "priority": "high",
+      "category": "functional",
+      "preconditions": ["User on Step 1 New Project onboarding form"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open onboarding form" },
+        { "action": "click", "target": "input[type='checkbox']", "description": "Check 'Include Test Credentials' box" },
+        { "action": "assert_visible", "target": "input[placeholder*='Test Email / Username']", "description": "Verify username field is mounted" },
+        { "action": "assert_visible", "target": "input[type='password']", "description": "Verify password field is securely masked with type=password" }
+      ],
+      "expected_result": "Test credentials section conditionally unrolls, enforcing password masking for sensitive tokens",
+      "status": "pending_review",
+      "reviewNotes": "Authentication credentials UI safety test."
+    },
+    {
+      "test_id": "AQA-034",
+      "requirement_id": "REQ-AQA-AUTH-34",
+      "title": "Verify Security Disclosures Banner for Local Protected Execution",
+      "priority": "medium",
+      "category": "functional",
+      "preconditions": ["User on Step 1 New Project onboarding form"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open onboarding form" },
+        { "action": "assert_visible", "target": "text=Safe Execution & Browser-Local Persistence", "description": "Assert security guarantee notice is present" },
+        { "action": "assert_visible", "target": "text=No untrusted server processes are spawned", "description": "Assert server process safety disclosure is displayed" }
+      ],
+      "expected_result": "Application transparently discloses local persistence scope and sandbox safety boundaries",
+      "status": "pending_review",
+      "reviewNotes": "Verifies compliance disclosure requirement."
+    },
+    {
+      "test_id": "AQA-035",
+      "requirement_id": "REQ-AQA-GATE-35",
+      "title": "Individual Test Case Approval and Rejection State Transitions",
+      "priority": "high",
+      "category": "functional",
+      "preconditions": ["User on Step 3 Test Case Review screen"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open review screen" },
+        { "action": "click", "target": "button:has-text('Reject')", "description": "Click Reject on first test case" },
+        { "action": "assert_visible", "target": "span:has-text('Rejected')", "description": "Verify test case badge shows Rejected" },
+        { "action": "click", "target": "button:has-text('Approve')", "description": "Click Approve to reverse decision" },
+        { "action": "assert_visible", "target": "span:has-text('Approved')", "description": "Verify test case badge shows Approved" }
+      ],
+      "expected_result": "Review actions reliably toggle test approval state, updating execution eligibility counters",
+      "status": "pending_review",
+      "reviewNotes": "Human signoff state transition verification."
+    },
+    {
+      "test_id": "AQA-036",
+      "requirement_id": "REQ-AQA-GATE-36",
+      "title": "Display Review Feedback Score and Assertion Rigor Badges",
+      "priority": "medium",
+      "category": "functional",
+      "preconditions": ["User inspecting test case details in Step 3"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Access review view" },
+        { "action": "assert_visible", "target": "text=Selector Stability", "description": "Assert selector stability score badge is visible" },
+        { "action": "assert_visible", "target": "text=Assertion Rigor", "description": "Assert assertion rigor badge is visible" }
+      ],
+      "expected_result": "Quality score badges (High stability, Strong assertions) help engineers audit test quality before approval",
+      "status": "pending_review",
+      "reviewNotes": "Agent 3 review feedback auditability test."
+    },
+    {
+      "test_id": "AQA-037",
+      "requirement_id": "REQ-AQA-API-37",
+      "title": "Verify Backend Route /api/qa/analyze Returns Valid JSON Schema",
+      "priority": "critical",
+      "category": "regression",
+      "preconditions": ["AutoQA Express backend server listening on port 3000"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open app" },
+        { "action": "fill", "target": "#target-url-input", "value": "https://demo.novashop-store.io", "description": "Enter target URL" },
+        { "action": "click", "target": "button[type='submit']", "description": "Dispatch analysis request to /api/qa/analyze" },
+        { "action": "assert_visible", "target": "text=Storefront Catalog", "description": "Verify response successfully parses and displays routes" }
+      ],
+      "expected_result": "Backend responds with HTTP 200 and schema compliant JSON containing routes, tech stack, and risks",
+      "status": "pending_review",
+      "reviewNotes": "Backend API integration contract test."
+    },
+    {
+      "test_id": "AQA-038",
+      "requirement_id": "REQ-AQA-API-38",
+      "title": "Verify Backend Route /api/qa/review-tests Review Gate Contract",
+      "priority": "high",
+      "category": "regression",
+      "preconditions": ["Test cases array supplied to review endpoint"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Access review screen" },
+        { "action": "assert_visible", "target": "button:has-text('Approve All')", "description": "Ensure reviews array hydrated from endpoint" }
+      ],
+      "expected_result": "Review endpoint evaluates step sequences, calculates stability score, and verifies assertions",
+      "status": "pending_review",
+      "reviewNotes": "Review gate API endpoint contract check."
+    },
+    {
+      "test_id": "AQA-039",
+      "requirement_id": "REQ-AQA-UI-39",
+      "title": "Display Informative Empty State When Zero Projects Are Loaded",
+      "priority": "medium",
+      "category": "functional",
+      "preconditions": ["All projects cleared from storage"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Load overview screen with no projects" },
+        { "action": "assert_visible", "target": "text=No Projects Onboarded Yet", "description": "Verify empty state title is rendered" },
+        { "action": "assert_visible", "target": "button:has-text('Test a New Application')", "description": "Verify primary onboarding CTA is present" }
+      ],
+      "expected_result": "Empty state guides new users to test their first application instead of displaying broken charts",
+      "status": "pending_review",
+      "reviewNotes": "Zero-data empty state verification."
+    },
+    {
+      "test_id": "AQA-040",
+      "requirement_id": "REQ-AQA-UI-40",
+      "title": "Display Spinning Loader During Asynchronous Analysis Scan",
+      "priority": "medium",
+      "category": "functional",
+      "preconditions": ["User clicks Start Application Analysis"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Onboarding form" },
+        { "action": "click", "target": "button[type='submit']", "description": "Click submit" },
+        { "action": "assert_visible", "target": "text=Inspecting Application Structure & Routes...", "description": "Verify animated spinner and loading message appear" }
+      ],
+      "expected_result": "UI surfaces clear loading state and disables repeated clicks during analysis execution",
+      "status": "pending_review",
+      "reviewNotes": "Asynchronous loading state verification."
+    },
+    {
+      "test_id": "AQA-041",
+      "requirement_id": "REQ-AQA-CONCUR-41",
+      "title": "Prevent Concurrent Suite Executions While Test Run Is In Progress",
+      "priority": "high",
+      "category": "boundary",
+      "preconditions": ["User triggers Run Test Suite in Step 4"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Execution screen" },
+        { "action": "click", "target": "button:has-text('Run Test Suite')", "description": "Start test run" },
+        { "action": "assert_visible", "target": "button:has-text('Running Test Suite...'):disabled", "description": "Verify execution trigger button is disabled while run is active" }
+      ],
+      "expected_result": "Execution lock prevents multiple concurrent simulation runs on the same project workspace",
+      "status": "pending_review",
+      "reviewNotes": "Race-condition prevention test."
+    },
+    {
+      "test_id": "AQA-042",
+      "requirement_id": "REQ-AQA-CALC-42",
+      "title": "Verify Metric Math Consistency on Pass Rate and Open Defects",
+      "priority": "high",
+      "category": "functional",
+      "preconditions": ["Test execution completed with 3 passed and 1 failed test"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Overview screen" },
+        { "action": "assert_visible", "target": "text=Pass Rate", "description": "Inspect Pass Rate card" },
+        { "action": "assert_text", "target": "span.font-mono:has-text('%')", "value": "75%", "description": "Verify mathematical pass rate calculation (3/4 = 75%)" }
+      ],
+      "expected_result": "Mathematical metrics correctly compute percentages, ratios, and summary totals without NaN or rounding errors",
+      "status": "pending_review",
+      "reviewNotes": "Data integrity and KPI calculation test."
+    },
+    {
+      "test_id": "AQA-043",
+      "requirement_id": "REQ-AQA-FLOW-43",
+      "title": "Sequential Workflow Stepper Navigation (Steps 1 -> 2 -> 3 -> 4)",
+      "priority": "critical",
+      "category": "critical-path",
+      "preconditions": ["User engages with top step indicator bar"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open Step 1" },
+        { "action": "click", "target": "button:has-text('Application Analysis')", "description": "Click Step 2 in stepper header" },
+        { "action": "assert_visible", "target": "text=Step 2 of 4: Application Discovery", "description": "Confirm navigation to Step 2" },
+        { "action": "click", "target": "button:has-text('Test Case Review')", "description": "Click Step 3 in stepper header" },
+        { "action": "assert_visible", "target": "text=Step 3 of 4: QA Review & Approval Gate", "description": "Confirm navigation to Step 3" },
+        { "action": "click", "target": "button:has-text('Test Execution')", "description": "Click Step 4 in stepper header" },
+        { "action": "assert_visible", "target": "text=Step 4 of 4: Test Execution & Evidence", "description": "Confirm navigation to Step 4" }
+      ],
+      "expected_result": "Stepper component allows non-destructive traversal across unlocked steps while preserving state",
+      "status": "pending_review",
+      "reviewNotes": "Workflow navigation state machine test."
+    },
+    {
+      "test_id": "AQA-044",
+      "requirement_id": "REQ-AQA-ZIP-44",
+      "title": "Validate Client-Side ZIP Archive Extraction and Language Detection",
+      "priority": "high",
+      "category": "functional",
+      "preconditions": ["User on Project Onboarding modal under Upload Project ZIP tab"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open onboarding" },
+        { "action": "click", "target": "button:has-text('Upload Project ZIP')", "description": "Select ZIP upload modality tab" },
+        { "action": "assert_visible", "target": "text=Drop your project .zip archive here", "description": "Verify dropzone is mounted" },
+        { "action": "assert_visible", "target": "text=ZIP archive unpacked client-side", "description": "Verify client-side privacy disclosure is present" }
+      ],
+      "expected_result": "ZIP dropzone accepts valid .zip archives, uncompresses files in browser memory, and detects TypeScript/JavaScript languages",
+      "status": "pending_review",
+      "reviewNotes": "ZIP archive extraction and security isolation test."
+    },
+    {
+      "test_id": "AQA-045",
+      "requirement_id": "REQ-AQA-FILTER-45",
+      "title": "Filter Test Cases by Category (Smoke, Functional, Negative, Boundary)",
+      "priority": "medium",
+      "category": "functional",
+      "preconditions": ["User on Step 3 Test Case Review screen"],
+      "steps": [
+        { "action": "navigate", "target": "/", "description": "Open review screen" },
+        { "action": "select", "target": "select[value*='all']", "value": "negative", "description": "Filter by 'negative' category" },
+        { "action": "assert_visible", "target": "text=Negative", "description": "Assert only negative test cases remain visible in table" }
+      ],
+      "expected_result": "Category dropdown filters the test cases table accurately to isolated test subsets",
+      "status": "pending_review",
+      "reviewNotes": "Multi-dimensional table filtering test."
+    }
+  ]
+}

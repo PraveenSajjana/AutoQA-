@@ -55,6 +55,15 @@ export const LiveBrowserSandbox: React.FC<LiveBrowserSandboxProps> = ({
   const [qaScorePublished, setQaScorePublished] = useState(false);
   const [assistSnippetUsed, setAssistSnippetUsed] = useState(false);
 
+  // Interactive state for Flipkart E-Commerce
+  const [fkSearch, setFkSearch] = useState<string>('iPhone 17 Pro Max');
+  const [fkView, setFkView] = useState<'catalog' | 'login' | 'product' | 'cart'>('product');
+  const [fkLoggedIn, setFkLoggedIn] = useState<boolean>(true);
+  const [fkMobile, setFkMobile] = useState<string>('8722451115');
+  const [fkOtp, setFkOtp] = useState<string>('');
+  const [fkCartCount, setFkCartCount] = useState<number>(1);
+  const [fkSuperCoins, setFkSuperCoins] = useState<boolean>(false);
+
   const getHighlightClass = (selector: string) => {
     if (highlightSelector && (highlightSelector.includes(selector) || selector.includes(highlightSelector))) {
       return 'ring-4 ring-indigo-500 shadow-lg shadow-indigo-500/50 scale-[1.02] transition-all duration-300';
@@ -515,6 +524,261 @@ export const LiveBrowserSandbox: React.FC<LiveBrowserSandboxProps> = ({
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Sample App 5: Flipkart E-Commerce (8722451115 & iPhone 17 Pro Max) */}
+        {(sampleAppId === 'flipkart-ecom' || targetUrl?.includes('flipkart')) && (
+          <div data-testid="flipkart-root" className="space-y-4 max-w-2xl mx-auto w-full font-sans">
+            {/* Flipkart Header */}
+            <div data-testid="fk-header" className="bg-[#2874F0] p-3 rounded-xl flex items-center justify-between gap-3 text-white shadow-md">
+              <div className="flex items-center gap-2 shrink-0">
+                <span data-testid="fk-logo" className="font-extrabold text-base tracking-tight italic flex items-center gap-1">
+                  Flipkart <span className="text-[10px] text-yellow-300 font-bold not-italic">Explore Plus</span>
+                </span>
+              </div>
+
+              {/* Search Bar */}
+              <div className="flex-1 max-w-sm flex items-center bg-white rounded px-2.5 py-1 text-slate-900">
+                <input
+                  data-testid="search-input"
+                  type="text"
+                  placeholder="Search for Products, Brands and More"
+                  value={fkSearch}
+                  onChange={(e) => setFkSearch(e.target.value)}
+                  className={`w-full text-xs bg-transparent focus:outline-hidden ${getHighlightClass('search-input')}`}
+                />
+                <button
+                  type="button"
+                  data-testid="search-submit-btn"
+                  onClick={() => setFkView('product')}
+                  className={`text-[#2874F0] hover:text-blue-700 font-bold text-xs shrink-0 ${getHighlightClass('search-submit-btn')}`}
+                >
+                  Search
+                </button>
+              </div>
+
+              {/* User Account & Cart */}
+              <div className="flex items-center gap-3 shrink-0 text-xs">
+                {fkLoggedIn ? (
+                  <div
+                    data-testid="user-account-badge"
+                    className={`flex items-center gap-1.5 bg-blue-700/80 px-2.5 py-1 rounded-md font-medium ${getHighlightClass('user-account-badge')}`}
+                  >
+                    <span>Account ({fkMobile})</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    data-testid="login-nav-btn"
+                    onClick={() => setFkView('login')}
+                    className="bg-white text-[#2874F0] px-3 py-1 rounded font-bold text-xs"
+                  >
+                    Login
+                  </button>
+                )}
+
+                <div
+                  data-testid="cart-badge"
+                  onClick={() => setFkView('cart')}
+                  className={`flex items-center gap-1 cursor-pointer font-bold bg-blue-700/80 hover:bg-blue-800 px-2.5 py-1 rounded-md transition ${getHighlightClass('cart-badge')}`}
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  <span>Cart: {fkCartCount}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Login View */}
+            {fkView === 'login' && (
+              <div data-testid="login-modal" className="p-6 bg-slate-900 border border-slate-800 rounded-xl max-w-md mx-auto space-y-4">
+                <div className="space-y-1">
+                  <h3 className="font-bold text-base text-white">Login with Mobile OTP</h3>
+                  <p className="text-xs text-slate-400">Get access to your Orders, Wishlist and Recommendations</p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs text-slate-300">Enter Mobile Number</label>
+                  <input
+                    type="tel"
+                    data-testid="mobile-login-input"
+                    value={fkMobile}
+                    onChange={(e) => setFkMobile(e.target.value)}
+                    placeholder="10-digit mobile number"
+                    className={`w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono text-white ${getHighlightClass('mobile-login-input')}`}
+                  />
+                  {fkMobile.length !== 10 && fkMobile.length > 0 && (
+                    <div data-testid="mobile-error-message" className="text-[11px] text-rose-400 font-medium">
+                      Please enter a valid 10-digit mobile number
+                    </div>
+                  )}
+                </div>
+
+                <div data-testid="otp-verification-screen" className="space-y-2 pt-2 border-t border-slate-800">
+                  <label className="text-xs text-slate-300">Enter 6-digit SMS OTP</label>
+                  <input
+                    type="text"
+                    data-testid="otp-input"
+                    value={fkOtp}
+                    onChange={(e) => setFkOtp(e.target.value)}
+                    placeholder="6-digit OTP code"
+                    className={`w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono text-white ${getHighlightClass('otp-input')}`}
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    data-testid="verify-otp-btn"
+                    onClick={() => {
+                      setFkLoggedIn(true);
+                      setFkView('product');
+                    }}
+                    className={`flex-1 py-2 bg-[#FB641B] hover:bg-orange-600 text-white font-bold text-xs rounded-lg transition ${getHighlightClass('verify-otp-btn')}`}
+                  >
+                    Verify &amp; Continue
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="request-otp-btn"
+                    onClick={() => setFkOtp('729401')}
+                    className={`px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg ${getHighlightClass('request-otp-btn')}`}
+                  >
+                    Resend OTP
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Product Listing / Detail View */}
+            {fkView === 'product' && (
+              <div data-testid="product-card-17-pro-max" className={`p-5 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col sm:flex-row items-center gap-6 ${getHighlightClass('product-card-17-pro-max')}`}>
+                <div className="w-36 h-48 bg-slate-950 rounded-xl border border-slate-800 flex flex-col items-center justify-center p-3 shrink-0 relative overflow-hidden">
+                  <div className="w-20 h-36 bg-gradient-to-b from-amber-700/30 via-slate-800 to-slate-900 rounded-2xl border-2 border-amber-600/60 shadow-xl flex flex-col items-center justify-between p-2">
+                    <div className="w-6 h-1.5 bg-black rounded-full" />
+                    <span className="text-[9px] font-mono font-bold text-amber-300">17 Pro Max</span>
+                    <div className="w-3 h-3 rounded-full bg-slate-800/80" />
+                  </div>
+                  <span className="text-[10px] font-mono text-amber-400 mt-2">Desert Titanium</span>
+                </div>
+
+                <div className="space-y-3 flex-1 min-w-0">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">4.9 ★ (1,482 Reviews)</span>
+                      <span className="text-[10px] font-mono text-slate-400">Flipkart Assured</span>
+                    </div>
+                    <h2 data-testid="product-title" className={`text-base font-bold text-white ${getHighlightClass('product-title')}`}>
+                      Apple iPhone 17 Pro Max (Desert Titanium, 256 GB)
+                    </h2>
+                    <p className="text-xs text-slate-400">
+                      6.9-inch Super Retina XDR &bull; A19 Pro Bionic &bull; 48MP Fusion Pro Camera &bull; Action Button
+                    </p>
+                  </div>
+
+                  <div className="flex items-baseline gap-3">
+                    <span data-testid="product-price" className={`text-2xl font-bold font-mono text-white ${getHighlightClass('product-price')}`}>
+                      ₹1,59,900
+                    </span>
+                    <span className="text-xs text-slate-500 line-through">₹1,69,900</span>
+                    <span className="text-xs text-emerald-400 font-bold">6% off</span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      data-testid="add-to-cart-btn"
+                      onClick={() => {
+                        setFkCartCount((prev) => prev + 1);
+                        setFkView('cart');
+                      }}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-[#FF9F00] hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-lg transition ${getHighlightClass('add-to-cart-btn')}`}
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                      <span>Add to Cart</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      data-testid="buy-now-btn"
+                      onClick={() => setFkView('cart')}
+                      className={`flex-1 py-2.5 px-4 bg-[#FB641B] hover:bg-orange-600 text-white font-bold text-xs rounded-xl shadow-lg transition ${getHighlightClass('buy-now-btn')}`}
+                    >
+                      Buy Now
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Cart View */}
+            {fkView === 'cart' && (
+              <div data-testid="cart-drawer" className={`p-5 bg-slate-900 border border-slate-800 rounded-2xl space-y-4 ${getHighlightClass('cart-drawer')}`}>
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                    <ShoppingCart className="w-4 h-4 text-[#2874F0]" /> My Cart ({fkCartCount} Items)
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setFkView('product')}
+                    className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
+                  >
+                    Continue Shopping
+                  </button>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <h4 data-testid="cart-item-title" className={`font-bold text-xs text-white ${getHighlightClass('cart-item-title')}`}>
+                      Apple iPhone 17 Pro Max (Desert Titanium, 256 GB)
+                    </h4>
+                    <p className="text-[11px] text-slate-400">Seller: SuperComNet &bull; Free Delivery by Tomorrow</p>
+                    <div data-testid="cart-item-price" className="font-mono text-sm font-bold text-white">
+                      ₹1,59,900
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">Qty: 1</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between text-xs">
+                  <label className="flex items-center gap-2 cursor-pointer text-slate-200">
+                    <input
+                      type="checkbox"
+                      data-testid="apply-supercoins-checkbox"
+                      checked={fkSuperCoins}
+                      onChange={(e) => setFkSuperCoins(e.target.checked)}
+                      className="rounded border-slate-700 text-[#2874F0]"
+                    />
+                    <span>Use 2,000 Flipkart SuperCoins for ₹2,000 Extra Off</span>
+                  </label>
+                  <span className="font-mono text-yellow-400 font-bold">2,000 Coins Available</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                  <span className="text-xs text-slate-400">Total Payable:</span>
+                  <div className="text-right">
+                    <div data-testid="cart-total" className={`font-mono text-xl font-bold text-white ${getHighlightClass('cart-total')}`}>
+                      {fkSuperCoins ? '₹1,57,900' : '₹1,59,900'}
+                    </div>
+                    {fkSuperCoins && (
+                      <div data-testid="discounted-total" className="text-[11px] font-mono text-emerald-400 font-semibold">
+                        ₹1,57,900 (Saved ₹2,000 via SuperCoins)
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  data-testid="proceed-to-buy-btn"
+                  onClick={() => alert('Order Placed Successfully in Sandbox for Mobile 8722451115!')}
+                  className={`w-full py-3 bg-[#FB641B] hover:bg-orange-600 text-white font-bold text-xs rounded-xl shadow-lg transition ${getHighlightClass('proceed-to-buy-btn')}`}
+                >
+                  Place Order &bull; Deliver to 8722451115
+                </button>
+              </div>
+            )}
           </div>
         )}
 

@@ -559,5 +559,206 @@ export const SAMPLE_APPS: SampleAppDefinition[] = [
         reviewNotes: 'Agent Copilot real-time responsiveness.'
       }
     ]
+  },
+  {
+    id: 'flipkart-ecom',
+    name: 'Flipkart — iPhone 17 Pro Max & 8722451115 Login',
+    category: 'E-Commerce / Retail Marketplace',
+    description: 'Flipkart marketplace login with mobile number 8722451115, search for Apple iPhone 17 Pro Max, verify specs, and add to shopping cart.',
+    url: 'https://www.flipkart.com',
+    mockHtml: `
+      <div id="flipkart-app" data-testid="flipkart-root">
+        <header class="fk-header" data-testid="fk-header">
+          <div data-testid="fk-logo">Flipkart</div>
+          <input data-testid="search-input" placeholder="Search for Products, Brands and More" />
+          <button data-testid="search-submit-btn">Search</button>
+          <div data-testid="user-account-badge">Account (8722451115)</div>
+          <div data-testid="cart-badge">Cart: 1</div>
+        </header>
+        <div data-testid="login-modal" style="display:none">
+          <input data-testid="mobile-login-input" placeholder="Enter Mobile number" value="8722451115" />
+          <button data-testid="request-otp-btn">Request OTP</button>
+          <div data-testid="otp-verification-screen" style="display:none">
+            <input data-testid="otp-input" placeholder="Enter 6-digit OTP" />
+            <button data-testid="verify-otp-btn">Verify</button>
+          </div>
+          <div data-testid="mobile-error-message" style="display:none">Please enter a valid 10-digit mobile number</div>
+        </div>
+        <main>
+          <div data-testid="product-card-17-pro-max">
+            <h2 data-testid="product-title">Apple iPhone 17 Pro Max (Desert Titanium, 256 GB)</h2>
+            <div data-testid="product-price">₹1,59,900</div>
+            <button data-testid="add-to-cart-btn">Add to Cart</button>
+            <button data-testid="buy-now-btn">Buy Now</button>
+          </div>
+          <div data-testid="cart-drawer">
+            <div data-testid="cart-item-title">Apple iPhone 17 Pro Max (Desert Titanium, 256 GB)</div>
+            <div data-testid="cart-item-price">₹1,59,900</div>
+            <div data-testid="cart-total">₹1,59,900</div>
+            <input type="checkbox" data-testid="apply-supercoins-checkbox" />
+            <div data-testid="discounted-total" style="display:none">₹1,57,900 (Saved ₹2,000)</div>
+            <button data-testid="proceed-to-buy-btn">Place Order</button>
+          </div>
+        </main>
+      </div>
+    `,
+    analysis: {
+      projectId: 'flipkart-ecom',
+      appName: 'Flipkart Online Shopping Marketplace',
+      version: 'v11.8.2',
+      summary: 'E-commerce platform with OTP-based mobile authentication (8722451115), catalog search, product detail pages, shopping cart state management, and Flipkart Plus SuperCoins loyalty rewards.',
+      techStackDetected: ['React 18', 'Next.js', 'Redux Toolkit', 'Tailwind CSS', 'Node.js Express', 'Playwright'],
+      routes: [
+        {
+          path: '/',
+          name: 'Storefront & Search Header',
+          description: 'Homepage banner carousel, universal search input, and account authentication portal.',
+          criticality: 'critical',
+          interactiveElements: [
+            { type: 'input', selector: 'search-input', label: 'Universal Search Input', purpose: 'Product query search' },
+            { type: 'button', selector: 'search-submit-btn', label: 'Search Button', purpose: 'Triggers search query' },
+            { type: 'button', selector: 'cart-badge', label: 'Cart Badge', purpose: 'Navigates to cart summary' }
+          ],
+          potentialRisks: ['Search autocomplete latency', 'Search input XSS sanitization']
+        },
+        {
+          path: '/account/login',
+          name: 'Mobile Number OTP Login',
+          description: 'Secure mobile number authentication (8722451115) with SMS OTP verification.',
+          criticality: 'critical',
+          interactiveElements: [
+            { type: 'input', selector: 'mobile-login-input', label: 'Mobile Number Input', purpose: '10-digit Indian mobile number (8722451115)' },
+            { type: 'button', selector: 'request-otp-btn', label: 'Request OTP Button', purpose: 'Dispatches 6-digit SMS OTP' },
+            { type: 'input', selector: 'otp-input', label: 'OTP Input Field', purpose: '6-digit SMS OTP code' },
+            { type: 'button', selector: 'verify-otp-btn', label: 'Verify Button', purpose: 'Exchanges OTP for session token' }
+          ],
+          potentialRisks: ['SMS gateway timeout', '10-digit regex bypass', 'Brute force OTP attempts']
+        },
+        {
+          path: '/search?q=iPhone+17+Pro+Max',
+          name: 'Product Listing & Search Results',
+          description: 'Filtered catalog results showing Apple iPhone 17 Pro Max models, ratings, and pricing.',
+          criticality: 'critical',
+          interactiveElements: [
+            { type: 'button', selector: 'product-card-17-pro-max', label: 'iPhone 17 Pro Max Card', purpose: 'Navigates to product detail page' },
+            { type: 'button', selector: 'add-to-cart-btn', label: 'Quick Add to Cart', purpose: 'Puts item in cart immediately' }
+          ],
+          potentialRisks: ['Out of stock race condition', 'Variant SKU price desync']
+        },
+        {
+          path: '/viewcart',
+          name: 'Shopping Cart & Order Summary',
+          description: 'Active cart items, delivery pincode availability, SuperCoins discount, and Place Order button.',
+          criticality: 'critical',
+          interactiveElements: [
+            { type: 'input', selector: 'apply-supercoins-checkbox', label: 'SuperCoins Checkbox', purpose: 'Deducts loyalty coins' },
+            { type: 'button', selector: 'proceed-to-buy-btn', label: 'Place Order Button', purpose: 'Proceeds to payment & address' }
+          ],
+          potentialRisks: ['Price calculation mismatch', 'Session expiry during checkout transition']
+        }
+      ],
+      boundaryScenarios: [
+        'Entering 9-digit incomplete phone number (872245111) instead of 10-digit 8722451115',
+        'Adding multiple iPhone 17 Pro Max units beyond customer limit (max 2 units)',
+        'Applying SuperCoins when wallet balance is zero',
+        'Rapid duplicate clicks on Place Order button'
+      ],
+      recommendedTestSuites: [
+        { name: 'Mobile Login Authentication (8722451115)', description: 'Validate OTP generation, verification, and session creation', estimatedCases: 2, priority: 'critical-path' },
+        { name: 'iPhone 17 Pro Max Search & Add to Cart', description: 'End-to-end user journey: search, product selection, add to cart', estimatedCases: 2, priority: 'critical-path' },
+        { name: 'Cart Pricing & SuperCoins Recalculation', description: 'Verify subtotal ₹1,59,900 and discount math', estimatedCases: 1, priority: 'functional' },
+        { name: 'Mobile Number Barrier Validation', description: 'Negative testing for invalid phone formats', estimatedCases: 1, priority: 'negative' }
+      ],
+      generatedAt: new Date().toISOString()
+    },
+    seededTestCases: [
+      {
+        test_id: 'FK-001',
+        requirement_id: 'REQ-FK-LOGIN-01',
+        module: 'Authentication & Mobile OTP',
+        title: 'Authenticate with Registered Mobile Number (8722451115) via OTP',
+        priority: 'critical',
+        category: 'critical-path',
+        automation_feasibility: 'automated_playwright',
+        preconditions: ['Mobile number 8722451115 registered on Flipkart', 'Network connection active'],
+        uncertainAssumptions: ['Assuming SMS gateway mock dispatches valid OTP (729401) in staging'],
+        steps: [
+          { action: 'navigate', target: 'https://www.flipkart.com/account/login', description: 'Open Flipkart login page' },
+          { action: 'fill', target: 'mobile-login-input', value: '8722451115', description: 'Enter mobile number 8722451115' },
+          { action: 'click', target: 'request-otp-btn', description: 'Click Request OTP' },
+          { action: 'assert_visible', target: 'otp-verification-screen', description: 'Verify OTP prompt appears' },
+          { action: 'fill', target: 'otp-input', value: '729401', description: 'Enter 6-digit verification code' },
+          { action: 'click', target: 'verify-otp-btn', description: 'Submit OTP' },
+          { action: 'assert_visible', target: 'user-account-badge', description: 'Confirm authenticated user avatar in header' }
+        ],
+        expected_result: 'User successfully logs in with mobile number 8722451115 and account state is confirmed',
+        status: 'approved',
+        reviewNotes: 'Verified against Flipkart OTP login architecture.'
+      },
+      {
+        test_id: 'FK-002',
+        requirement_id: 'REQ-FK-CART-02',
+        module: 'Catalog Search & Shopping Cart',
+        title: 'Search for "iPhone 17 Pro Max" and Add to Cart with Verification',
+        priority: 'critical',
+        category: 'critical-path',
+        automation_feasibility: 'automated_playwright',
+        preconditions: ['User authenticated with 8722451115', 'Storefront catalog online'],
+        uncertainAssumptions: ['Assumes iPhone 17 Pro Max SKU (Desert Titanium 256GB) in stock'],
+        steps: [
+          { action: 'navigate', target: 'https://www.flipkart.com', description: 'Open Flipkart homepage' },
+          { action: 'fill', target: 'search-input', value: 'iPhone 17 Pro Max', description: 'Enter "iPhone 17 Pro Max" into search bar' },
+          { action: 'click', target: 'search-submit-btn', description: 'Click Search' },
+          { action: 'assert_visible', target: 'product-card-17-pro-max', description: 'Verify Apple iPhone 17 Pro Max listing card' },
+          { action: 'click', target: 'add-to-cart-btn', description: 'Click Add to Cart button' },
+          { action: 'assert_visible', target: 'cart-badge', description: 'Assert shopping cart badge increments to 1' },
+          { action: 'assert_text', target: 'cart-item-title', value: 'Apple iPhone 17 Pro Max (Desert Titanium, 256 GB)', description: 'Verify item title in cart' },
+          { action: 'assert_visible', target: 'proceed-to-buy-btn', description: 'Ensure Place Order CTA is actionable' }
+        ],
+        expected_result: 'Apple iPhone 17 Pro Max is successfully added to cart with price ₹1,59,900 and cart counter displays 1',
+        status: 'approved',
+        reviewNotes: 'End-to-end shopping cart journey verified.'
+      },
+      {
+        test_id: 'FK-003',
+        requirement_id: 'REQ-FK-PRICE-03',
+        module: 'Cart & Price Recalculation',
+        title: 'Verify Cart Subtotal and SuperCoins Discount for iPhone 17 Pro Max',
+        priority: 'high',
+        category: 'functional',
+        automation_feasibility: 'automated_playwright',
+        preconditions: ['iPhone 17 Pro Max added to cart'],
+        uncertainAssumptions: ['Assuming customer account 8722451115 has 2000 SuperCoins balance'],
+        steps: [
+          { action: 'navigate', target: 'https://www.flipkart.com/viewcart', description: 'Navigate to cart view' },
+          { action: 'assert_text', target: 'cart-total', value: '₹1,59,900', description: 'Confirm base price ₹1,59,900' },
+          { action: 'click', target: 'apply-supercoins-checkbox', description: 'Apply Flipkart SuperCoins discount' },
+          { action: 'assert_visible', target: 'discounted-total', description: 'Verify discounted total ₹1,57,900' }
+        ],
+        expected_result: 'Cart price recalculates correctly without rounding or currency symbol errors',
+        status: 'approved',
+        reviewNotes: 'High-value item checkout pricing check.'
+      },
+      {
+        test_id: 'FK-004',
+        requirement_id: 'REQ-FK-NEG-04',
+        module: 'Input Validation & Security',
+        title: 'Reject Invalid 9-digit Mobile Number on Login (Negative Test)',
+        priority: 'medium',
+        category: 'negative',
+        automation_feasibility: 'automated_playwright',
+        preconditions: ['User on Flipkart login dialog'],
+        uncertainAssumptions: ['Assumes client-side HTML5 or JS validator blocks submission'],
+        steps: [
+          { action: 'navigate', target: 'https://www.flipkart.com/account/login', description: 'Open login page' },
+          { action: 'fill', target: 'mobile-login-input', value: '872245111', description: 'Enter incomplete 9-digit number' },
+          { action: 'click', target: 'request-otp-btn', description: 'Attempt OTP dispatch' },
+          { action: 'assert_visible', target: 'mobile-error-message', description: 'Verify validation barrier error appears' }
+        ],
+        expected_result: 'Client-side input barrier prevents OTP dispatch on invalid phone numbers',
+        status: 'approved',
+        reviewNotes: 'Mobile number boundary barrier.'
+      }
+    ]
   }
 ];

@@ -243,7 +243,22 @@ export const NewProjectScreen: React.FC<NewProjectScreenProps> = ({
           Or Select a Pre-Configured Sample Target
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div
+            onClick={() => {
+              onLoadSample('flipkart-ecom');
+            }}
+            className="p-4 rounded-xl bg-[#111A2E] hover:bg-[#172238] border border-[#26334D] hover:border-[#7C5CFC] cursor-pointer transition space-y-1 relative ring-1 ring-[#7C5CFC]/30 group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-xs text-[#F1F5F9] group-hover:text-[#7C5CFC] transition">Flipkart E-Commerce</span>
+              <span className="text-[10px] font-mono text-[#2874F0] bg-[#2874F0]/15 px-2 py-0.5 rounded font-bold">8722451115</span>
+            </div>
+            <p className="text-[11px] text-[#94A3B8]">
+              Login via mobile (8722451115), search for iPhone 17 Pro Max, and add to cart with price verification.
+            </p>
+          </div>
+
           <div
             onClick={() => {
               onLoadSample('novashop-ecom');
@@ -251,7 +266,7 @@ export const NewProjectScreen: React.FC<NewProjectScreenProps> = ({
             className="p-4 rounded-xl bg-[#111A2E] hover:bg-[#172238] border border-[#26334D] hover:border-[#7C5CFC]/50 cursor-pointer transition space-y-1"
           >
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-xs text-[#F1F5F9]">NovaShop Modern E-Commerce</span>
+              <span className="font-semibold text-xs text-[#F1F5F9]">NovaShop Modern Store</span>
               <span className="text-[10px] font-mono text-[#22D3EE] bg-[#22D3EE]/10 px-2 py-0.5 rounded">Storefront</span>
             </div>
             <p className="text-[11px] text-[#94A3B8]">
@@ -266,7 +281,7 @@ export const NewProjectScreen: React.FC<NewProjectScreenProps> = ({
             className="p-4 rounded-xl bg-[#111A2E] hover:bg-[#172238] border border-[#26334D] hover:border-[#7C5CFC]/50 cursor-pointer transition space-y-1"
           >
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-xs text-[#F1F5F9]">Observe.ai Speech QA Platform</span>
+              <span className="font-semibold text-xs text-[#F1F5F9]">Observe.ai Speech QA</span>
               <span className="text-[10px] font-mono text-[#7C5CFC] bg-[#7C5CFC]/10 px-2 py-0.5 rounded">SaaS Audio</span>
             </div>
             <p className="text-[11px] text-[#94A3B8]">
