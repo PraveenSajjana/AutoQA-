@@ -281,6 +281,7 @@ export const TestExecutionEvidenceScreen: React.FC<TestExecutionEvidenceScreenPr
               currentRun.results.map((result, idx) => {
                 const isSelected = idx === activeTestIndex;
                 const isPassed = result.status === 'passed';
+                const matchingTc = testCases.find((tc) => tc.test_id === result.testId);
                 return (
                   <div
                     key={result.testId}
@@ -295,10 +296,15 @@ export const TestExecutionEvidenceScreen: React.FC<TestExecutionEvidenceScreenPr
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span className="font-mono text-xs font-bold text-[#7C5CFC]">
                           {result.testId}
                         </span>
+                        {matchingTc?.feature_id && (
+                          <span className="text-[10px] font-mono text-[#9278FF] bg-[#7C5CFC]/15 px-1.5 py-0.2 rounded border border-[#7C5CFC]/30">
+                            {matchingTc.feature_id}
+                          </span>
+                        )}
                         <span className={`inline-flex items-center gap-1 text-[11px] font-mono font-semibold px-2 py-0.2 rounded ${
                           isPassed
                             ? 'bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30'
@@ -318,6 +324,12 @@ export const TestExecutionEvidenceScreen: React.FC<TestExecutionEvidenceScreenPr
                       {result.testTitle}
                     </h4>
 
+                    {matchingTc?.traceability && (
+                      <div className="mt-1 font-mono text-[10px] text-[#22D3EE] truncate">
+                        {matchingTc.traceability}
+                      </div>
+                    )}
+
                     {result.defect && (
                       <div className="mt-2 text-[11px] text-[#F87171] font-mono truncate flex items-center gap-1">
                         <Bug className="w-3 h-3 shrink-0" />
@@ -335,17 +347,47 @@ export const TestExecutionEvidenceScreen: React.FC<TestExecutionEvidenceScreenPr
         {activeTestResult ? (
           <div className="lg:col-span-7 bg-[#111A2E] border border-[#26334D] rounded-2xl p-6 space-y-6">
             {/* Header */}
-            <div className="space-y-2 pb-4 border-b border-[#26334D]">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-sm font-bold text-[#7C5CFC]">{activeTestResult.testId}</span>
-                <span className={`text-xs font-mono font-bold uppercase px-2 py-0.5 rounded ${
-                  activeTestResult.status === 'passed' ? 'bg-[#22C55E]/15 text-[#22C55E]' : 'bg-[#F87171]/15 text-[#F87171]'
-                }`}>
-                  {activeTestResult.status} ({activeTestResult.durationMs}ms)
-                </span>
-              </div>
-              <h2 className="text-base font-bold text-[#F1F5F9]">{activeTestResult.testTitle}</h2>
-            </div>
+            {(() => {
+              const activeTc = testCases.find((tc) => tc.test_id === activeTestResult.testId);
+              return (
+                <div className="space-y-2 pb-4 border-b border-[#26334D]">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm font-bold text-[#7C5CFC]">{activeTestResult.testId}</span>
+                      {activeTc?.feature_id && (
+                        <span className="text-xs font-mono font-semibold text-[#9278FF] bg-[#7C5CFC]/15 px-2 py-0.5 rounded border border-[#7C5CFC]/30">
+                          Feature: {activeTc.feature_id}
+                        </span>
+                      )}
+                      {activeTc?.test_type && (
+                        <span className="text-xs font-mono uppercase text-[#22D3EE] bg-[#22D3EE]/10 px-2 py-0.5 rounded border border-[#22D3EE]/25">
+                          {activeTc.test_type}
+                        </span>
+                      )}
+                    </div>
+                    <span className={`text-xs font-mono font-bold uppercase px-2 py-0.5 rounded ${
+                      activeTestResult.status === 'passed' ? 'bg-[#22C55E]/15 text-[#22C55E]' : 'bg-[#F87171]/15 text-[#F87171]'
+                    }`}>
+                      {activeTestResult.status} ({activeTestResult.durationMs}ms)
+                    </span>
+                  </div>
+
+                  <h2 className="text-base font-bold text-[#F1F5F9]">{activeTestResult.testTitle}</h2>
+
+                  {activeTc?.objective && (
+                    <p className="text-xs text-[#94A3B8] italic">
+                      Objective: {activeTc.objective}
+                    </p>
+                  )}
+
+                  {activeTc?.traceability && (
+                    <div className="text-[11px] font-mono text-[#64748B]">
+                      Trace: <code className="text-[#22D3EE]">{activeTc.traceability}</code>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Evidence Tabs */}
             <div className="flex border-b border-[#26334D] gap-4 text-xs font-medium">

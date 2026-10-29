@@ -40,7 +40,6 @@ interface WorkflowShellProps {
   onProceedToDesign: () => Promise<void> | void;
   isGeneratingTests: boolean;
   onRunSuite: (defectMode?: 'none' | 'product_bug' | 'flaky_selector' | 'network_timeout') => Promise<void> | void;
-  onLoadSample: (sampleId: string) => void;
   onOpenPdfModal?: () => void;
 }
 
@@ -62,7 +61,6 @@ export const WorkflowShell: React.FC<WorkflowShellProps> = ({
   onProceedToDesign,
   isGeneratingTests,
   onRunSuite,
-  onLoadSample,
   onOpenPdfModal,
 }) => {
   const steps: { id: WorkflowStepId; number: number; label: string; description: string; icon: any }[] = [
@@ -174,7 +172,6 @@ export const WorkflowShell: React.FC<WorkflowShellProps> = ({
           <NewProjectScreen
             onStartAnalysis={onStartAnalysis}
             isLoading={isAnalyzing}
-            onLoadSample={onLoadSample}
           />
         )}
 

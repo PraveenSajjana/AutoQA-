@@ -37,6 +37,7 @@ export const TestCaseReviewScreen: React.FC<TestCaseReviewScreenProps> = ({
   const [selectedCaseId, setSelectedCaseId] = useState<string>(testCases[0]?.test_id || '');
   const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending_review' | 'rejected'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [featureFilter, setFeatureFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editFormData, setEditFormData] = useState<TestCase | null>(null);
@@ -45,12 +46,19 @@ export const TestCaseReviewScreen: React.FC<TestCaseReviewScreenProps> = ({
   const pendingCases = testCases.filter((tc) => tc.status === 'pending_review');
   const rejectedCases = testCases.filter((tc) => tc.status === 'rejected');
 
+  // Discover all distinct feature IDs
+  const availableFeatureIds = Array.from(new Set(testCases.map((tc) => tc.feature_id).filter(Boolean))) as string[];
+
   const filteredCases = testCases.filter((tc) => {
     if (statusFilter !== 'all' && tc.status !== statusFilter) return false;
-    if (categoryFilter !== 'all' && (tc.category || 'functional') !== categoryFilter) return false;
+    if (categoryFilter !== 'all') {
+      const type = tc.test_type || tc.category || 'functional';
+      if (type !== categoryFilter) return false;
+    }
+    if (featureFilter !== 'all' && tc.feature_id !== featureFilter) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const match = `${tc.test_id} ${tc.title} ${tc.requirement_id} ${tc.module || ''}`.toLowerCase();
+      const match = `${tc.test_id} ${tc.title} ${tc.requirement_id || ''} ${tc.feature_id || ''} ${tc.module || ''} ${tc.objective || ''} ${tc.traceability || ''}`.toLowerCase();
       if (!match.includes(q)) return false;
     }
     return true;
@@ -210,12 +218,12 @@ export const TestCaseReviewScreen: React.FC<TestCaseReviewScreenProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="sm:col-span-2 relative">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div className="sm:col-span-1 md:col-span-2 relative">
           <Search className="w-4 h-4 text-[#64748B] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search test cases by ID, title, requirement or module..."
+            placeholder="Search by ID, feature, route, or keyword..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 bg-[#0D1629] border border-[#26334D] rounded-lg text-xs text-[#F1F5F9] placeholder-[#64748B] focus:outline-hidden focus:border-[#7C5CFC]"
@@ -226,15 +234,30 @@ export const TestCaseReviewScreen: React.FC<TestCaseReviewScreenProps> = ({
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            aria-label="Filter test cases by category"
+            aria-label="Filter test cases by type"
             className="w-full px-3 py-2 bg-[#0D1629] border border-[#26334D] rounded-lg text-xs text-[#F1F5F9] focus:outline-hidden focus:border-[#7C5CFC]"
           >
-            <option value="all">All Categories</option>
-            <option value="functional">Functional</option>
+            <option value="all">All Test Types</option>
+            <option value="positive">Positive / Happy Path</option>
             <option value="negative">Negative Validation</option>
             <option value="boundary">Boundary Values</option>
+            <option value="security">Security &amp; Auth</option>
             <option value="smoke">Smoke / Health</option>
             <option value="regression">Regression</option>
+          </select>
+        </div>
+
+        <div>
+          <select
+            value={featureFilter}
+            onChange={(e) => setFeatureFilter(e.target.value)}
+            aria-label="Filter test cases by discovered feature"
+            className="w-full px-3 py-2 bg-[#0D1629] border border-[#26334D] rounded-lg text-xs text-[#F1F5F9] focus:outline-hidden focus:border-[#7C5CFC]"
+          >
+            <option value="all">All Discovered Features ({availableFeatureIds.length})</option>
+            {availableFeatureIds.map((fId) => (
+              <option key={fId} value={fId}>{fId}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -243,11 +266,14 @@ export const TestCaseReviewScreen: React.FC<TestCaseReviewScreenProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Test Cases List (5 cols) */}
         <div className="lg:col-span-5 space-y-2">
-          <div className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider px-1">
-            Test Cases ({filteredCases.length})
+          <div className="flex items-center justify-between text-xs font-semibold text-[#94A3B8] uppercase tracking-wider px-1">
+            <span>Test Cases ({filteredCases.length})</span>
+            {featureFilter !== 'all' && (
+              <span className="text-[10px] text-[#7C5CFC] font-mono lowercase">feature: {featureFilter}</span>
+            )}
           </div>
 
-          <div className="space-y-2 max-h-[640px] overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-[660px] overflow-y-auto pr-1">
             {filteredCases.length === 0 ? (
               <div className="p-8 text-center bg-[#111A2E] rounded-xl border border-[#26334D] text-xs text-[#64748B]">
                 No test cases match your filter criteria.
@@ -255,6 +281,7 @@ export const TestCaseReviewScreen: React.FC<TestCaseReviewScreenProps> = ({
             ) : (
               filteredCases.map((tc) => {
                 const isSelected = selectedCase?.test_id === tc.test_id;
+                const testType = tc.test_type || tc.category || 'functional';
                 return (
                   <div
                     key={tc.test_id}
@@ -269,10 +296,15 @@ export const TestCaseReviewScreen: React.FC<TestCaseReviewScreenProps> = ({
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span className="font-mono text-xs font-bold text-[#7C5CFC]">
                           {tc.test_id}
                         </span>
+                        {tc.feature_id && (
+                          <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-[#7C5CFC]/15 text-[#9278FF] border border-[#7C5CFC]/30">
+                            {tc.feature_id}
+                          </span>
+                        )}
                         <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.2 rounded ${
                           tc.status === 'approved' ? 'bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30' :
                           tc.status === 'rejected' ? 'bg-[#F87171]/15 text-[#F87171] border border-[#F87171]/30' :
@@ -282,22 +314,48 @@ export const TestCaseReviewScreen: React.FC<TestCaseReviewScreenProps> = ({
                         </span>
                       </div>
 
-                      <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
-                        tc.priority === 'critical' ? 'bg-[#F87171]/20 text-[#F87171]' :
-                        tc.priority === 'high' ? 'bg-[#FBBF24]/20 text-[#FBBF24]' :
-                        'bg-[#64748B]/20 text-[#94A3B8]'
-                      }`}>
-                        {tc.priority}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
+                          testType === 'positive' ? 'bg-[#22C55E]/15 text-[#22C55E]' :
+                          testType === 'negative' ? 'bg-[#FBBF24]/15 text-[#FBBF24]' :
+                          testType === 'boundary' ? 'bg-[#9278FF]/15 text-[#9278FF]' :
+                          testType === 'security' ? 'bg-[#F87171]/15 text-[#F87171]' :
+                          'bg-[#64748B]/20 text-[#94A3B8]'
+                        }`}>
+                          {testType}
+                        </span>
+                        <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
+                          tc.priority === 'critical' ? 'bg-[#F87171]/20 text-[#F87171]' :
+                          tc.priority === 'high' ? 'bg-[#FBBF24]/20 text-[#FBBF24]' :
+                          'bg-[#64748B]/20 text-[#94A3B8]'
+                        }`}>
+                          {tc.priority}
+                        </span>
+                      </div>
                     </div>
 
-                    <h4 className="text-xs font-medium text-[#F1F5F9] line-clamp-2 leading-relaxed mb-2">
+                    <h4 className="text-xs font-medium text-[#F1F5F9] line-clamp-2 leading-relaxed mb-1.5">
                       {tc.title}
                     </h4>
 
+                    {tc.objective && (
+                      <p className="text-[11px] text-[#94A3B8] line-clamp-1 mb-2 italic">
+                        {tc.objective}
+                      </p>
+                    )}
+
                     <div className="flex items-center justify-between text-[11px] text-[#64748B]">
-                      <span className="font-mono text-[#22D3EE]">{tc.requirement_id}</span>
-                      <span>{tc.steps.length} Steps</span>
+                      <span className="font-mono text-[#22D3EE] truncate max-w-[180px]">
+                        {tc.traceability || tc.requirement_id || 'UI'}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {tc.confidence && (
+                          <span className="font-mono text-[10px] text-[#22D3EE] bg-[#22D3EE]/10 px-1 rounded">
+                            {tc.confidence}% conf
+                          </span>
+                        )}
+                        <span>{tc.steps.length} Steps</span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -314,8 +372,13 @@ export const TestCaseReviewScreen: React.FC<TestCaseReviewScreenProps> = ({
                 {/* Header & Approval Controls */}
                 <div className="space-y-3 pb-4 border-b border-[#26334D]">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-base font-mono font-bold text-[#7C5CFC]">{selectedCase.test_id}</span>
+                      {selectedCase.feature_id && (
+                        <span className="text-xs font-mono font-semibold text-[#9278FF] bg-[#7C5CFC]/15 px-2 py-0.5 rounded border border-[#7C5CFC]/30">
+                          Feature: {selectedCase.feature_id}
+                        </span>
+                      )}
                       <span className="text-xs font-mono text-[#22D3EE] bg-[#22D3EE]/10 px-2 py-0.5 rounded border border-[#22D3EE]/20">
                         {selectedCase.requirement_id}
                       </span>
@@ -364,14 +427,51 @@ export const TestCaseReviewScreen: React.FC<TestCaseReviewScreenProps> = ({
                     {selectedCase.title}
                   </h2>
 
+                  {/* Objective */}
+                  {selectedCase.objective && (
+                    <div className="p-3 rounded-xl bg-[#0D1629] border border-[#26334D] text-xs text-[#94A3B8]">
+                      <span className="font-semibold text-[#F1F5F9] block mb-0.5">Objective:</span>
+                      <p className="leading-relaxed">{selectedCase.objective}</p>
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap items-center gap-3 text-xs text-[#94A3B8]">
                     <span>Module: <strong className="text-[#F1F5F9]">{selectedCase.module || 'General'}</strong></span>
                     <span>&bull;</span>
-                    <span>Category: <strong className="text-[#F1F5F9] uppercase">{selectedCase.category || 'Functional'}</strong></span>
+                    <span>Type: <strong className="text-[#F1F5F9] uppercase">{selectedCase.test_type || selectedCase.category || 'Functional'}</strong></span>
                     <span>&bull;</span>
                     <span>Priority: <strong className="text-[#FBBF24] uppercase">{selectedCase.priority}</strong></span>
+                    {selectedCase.traceability && (
+                      <>
+                        <span>&bull;</span>
+                        <span>Traceability: <code className="text-[#22D3EE] font-mono text-[11px]">{selectedCase.traceability}</code></span>
+                      </>
+                    )}
+                    {selectedCase.confidence && (
+                      <>
+                        <span>&bull;</span>
+                        <span className="text-[#22D3EE]">Confidence: {selectedCase.confidence}%</span>
+                      </>
+                    )}
                   </div>
                 </div>
+
+                {/* Test Data Parameters (if any) */}
+                {selectedCase.test_data && Object.keys(selectedCase.test_data).length > 0 && (
+                  <div className="p-3.5 rounded-xl bg-[#0D1629] border border-[#26334D] space-y-2 text-xs">
+                    <div className="font-semibold text-[#94A3B8] uppercase text-[10px] tracking-wider">
+                      Synthesized Test Data
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
+                      {Object.entries(selectedCase.test_data).map(([key, value]) => (
+                        <div key={key} className="p-2 rounded bg-[#111A2E] border border-[#26334D] flex items-center justify-between">
+                          <span className="text-[#64748B]">{key}:</span>
+                          <span className="text-[#22D3EE] font-medium">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Preconditions */}
                 {selectedCase.preconditions && selectedCase.preconditions.length > 0 && (
@@ -472,15 +572,43 @@ export const TestCaseReviewScreen: React.FC<TestCaseReviewScreenProps> = ({
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[#94A3B8] block mb-1">Objective</label>
+                      <input
+                        type="text"
+                        value={editFormData.objective || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, objective: e.target.value })}
+                        placeholder="State the primary verification goal of this test..."
+                        className="w-full px-3 py-2 bg-[#0D1629] border border-[#26334D] rounded-lg text-[#F1F5F9] focus:outline-hidden focus:border-[#7C5CFC]"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="text-[#94A3B8] block mb-1">Requirement ID</label>
+                        <label className="text-[#94A3B8] block mb-1">Linked Feature ID</label>
                         <input
                           type="text"
-                          value={editFormData.requirement_id}
-                          onChange={(e) => setEditFormData({ ...editFormData, requirement_id: e.target.value })}
+                          value={editFormData.feature_id || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, feature_id: e.target.value })}
+                          placeholder="e.g. FEAT-001"
                           className="w-full px-3 py-2 bg-[#0D1629] border border-[#26334D] rounded-lg font-mono text-[#F1F5F9] focus:outline-hidden focus:border-[#7C5CFC]"
                         />
+                      </div>
+
+                      <div>
+                        <label className="text-[#94A3B8] block mb-1">Test Type</label>
+                        <select
+                          value={editFormData.test_type || editFormData.category || 'positive'}
+                          onChange={(e) => setEditFormData({ ...editFormData, test_type: e.target.value as any, category: e.target.value as any })}
+                          className="w-full px-3 py-2 bg-[#0D1629] border border-[#26334D] rounded-lg text-[#F1F5F9] focus:outline-hidden focus:border-[#7C5CFC]"
+                        >
+                          <option value="positive">Positive / Happy Path</option>
+                          <option value="negative">Negative Validation</option>
+                          <option value="boundary">Boundary Values</option>
+                          <option value="security">Security &amp; Auth</option>
+                          <option value="smoke">Smoke / Health</option>
+                          <option value="regression">Regression</option>
+                        </select>
                       </div>
 
                       <div>
@@ -495,6 +623,29 @@ export const TestCaseReviewScreen: React.FC<TestCaseReviewScreenProps> = ({
                           <option value="medium">Medium</option>
                           <option value="low">Low</option>
                         </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[#94A3B8] block mb-1">Requirement ID</label>
+                        <input
+                          type="text"
+                          value={editFormData.requirement_id}
+                          onChange={(e) => setEditFormData({ ...editFormData, requirement_id: e.target.value })}
+                          className="w-full px-3 py-2 bg-[#0D1629] border border-[#26334D] rounded-lg font-mono text-[#F1F5F9] focus:outline-hidden focus:border-[#7C5CFC]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[#94A3B8] block mb-1">Traceability (File/Route)</label>
+                        <input
+                          type="text"
+                          value={editFormData.traceability || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, traceability: e.target.value })}
+                          placeholder="e.g. /checkout or src/App.tsx"
+                          className="w-full px-3 py-2 bg-[#0D1629] border border-[#26334D] rounded-lg font-mono text-[#F1F5F9] focus:outline-hidden focus:border-[#7C5CFC]"
+                        />
                       </div>
                     </div>
 

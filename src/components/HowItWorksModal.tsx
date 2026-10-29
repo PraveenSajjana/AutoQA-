@@ -152,10 +152,10 @@ export const HowItWorksModal: React.FC<HowItWorksModalProps> = ({
                 onClose();
                 onTryDemo();
               }}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center gap-1.5"
+              className="px-4 py-2 bg-[#7C5CFC] hover:bg-[#9278FF] text-white text-xs font-semibold rounded-xl shadow-lg shadow-[#7C5CFC]/30 transition flex items-center gap-1.5"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Load Instant Demo App</span>
+              <span>Scan Active Codebase</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
             <button

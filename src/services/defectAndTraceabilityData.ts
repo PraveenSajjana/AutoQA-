@@ -1,203 +1,73 @@
-import { DefectTriage, TraceabilityRequirement } from '../types/qa';
+import { DefectTriage, TraceabilityRequirement, ApplicationAnalysis, TestCase } from '../types/qa';
 
-export const INITIAL_DEFECTS: DefectTriage[] = [
-  {
-    id: 'DEF-104',
-    testId: 'ECOM-002',
-    testTitle: 'Verify promotional coupon SAVE50 recalculates cart subtotal correctly',
-    category: 'PRODUCT_DEFECT',
-    classification: 'product_defect',
-    status: 'confirmed',
-    confidence: 96,
-    severity: 'critical',
-    rootCauseAnalysis: 'Floating point rounding discrepancy in PromoEngine.calculateDiscount(). The promo code reduces the total to $0.00 instead of applying a 50% discount ($74.50), causing an internal assertion panic in the payment gateway schema validation.',
-    failedStep: {
-      action: 'assert_text',
-      target: '[data-testid="cart-total"]',
-      value: '$74.50',
-      description: 'Assert that cart total reflects 50% off discount',
-    },
-    actualBehavior: 'Received "$0.00" on cart total element instead of expected "$74.50".',
-    expectedBehavior: 'Expected cart total text to equal "$74.50" with 50% promo discount applied.',
-    suggestedFix: 'Update PromoEngine.ts line 42: calculate (subtotal * discountRate) rather than deducting 100% when multiplier type is PERCENTAGE.',
-    codeSnippet: `// Suggested patch for src/services/PromoEngine.ts:
-- const discounted = subtotal * (1 - (coupon.type === 'PERCENTAGE' ? 1.0 : coupon.value));
-+ const discounted = subtotal * (1 - (coupon.type === 'PERCENTAGE' ? coupon.value / 100 : coupon.value));
-return Number(discounted.toFixed(2));`,
-    requirementId: 'REQ-ECOM-02',
-    assignedTo: 'Alex Chen (Backend Lead)',
-    createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-  },
-  {
-    id: 'DEF-108',
-    testId: 'ECOM-003',
-    testTitle: 'Reject order placement when billing email format is invalid',
-    category: 'PRODUCT_DEFECT',
-    classification: 'suspected_defect',
-    status: 'in_progress',
-    confidence: 88,
-    severity: 'major',
-    rootCauseAnalysis: 'Client-side email RFC 5322 regex validation is bypassed when form is submitted via rapid Enter keypress before onBlur event fires.',
-    failedStep: {
-      action: 'assert_visible',
-      target: '[data-testid="email-error-message"]',
-      description: 'Verify error tooltip is rendered for invalid email',
-    },
-    actualBehavior: 'Error message element was not visible within 4000ms timeout.',
-    expectedBehavior: 'Validation message "Please enter a valid email address" should render.',
-    suggestedFix: 'Trigger HTML5 form validity check in onSubmit handler before dispatching payment payload.',
-    codeSnippet: `// In CheckoutForm.tsx:
-const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!formRef.current?.checkValidity()) {
-    formRef.current?.reportValidity();
-    return;
+/**
+ * Initial empty defects state.
+ * Defects are triaged dynamically from real Playwright test execution failures
+ * and AI root-cause analysis, not hardcoded sample fixtures.
+ */
+export const INITIAL_DEFECTS: DefectTriage[] = [];
+
+/**
+ * Initial empty requirements state.
+ * Requirements are synthesized dynamically from analyzed application features,
+ * routes, and user specifications.
+ */
+export const INITIAL_TRACEABILITY_REQUIREMENTS: TraceabilityRequirement[] = [];
+
+/**
+ * Dynamically extract requirement traceability items from an analyzed application's
+ * discovered features, routes, and test cases.
+ */
+export function createRequirementsFromAnalysis(
+  analysis: ApplicationAnalysis,
+  testCases: TestCase[] = []
+): TraceabilityRequirement[] {
+  if (analysis.discoveredFeatures && analysis.discoveredFeatures.length > 0) {
+    return analysis.discoveredFeatures.map((f, idx) => {
+      const code = `REQ-${(idx + 1).toString().padStart(3, '0')}`;
+      const matchingTests = testCases.filter(
+        (tc) =>
+          tc.feature_id === f.id ||
+          tc.title.toLowerCase().includes(f.name.toLowerCase()) ||
+          (tc.module && tc.module.toLowerCase().includes(f.name.toLowerCase()))
+      );
+      return {
+        id: `req-${f.id || idx + 1}`,
+        code,
+        title: f.name,
+        description: f.description,
+        module: f.name,
+        priority: f.riskLevel === 'critical' ? 'critical' : f.riskLevel === 'high' ? 'high' : 'medium',
+        status: matchingTests.length > 0 ? 'covered' : 'uncovered',
+        testCaseIds: matchingTests.map((t) => t.test_id),
+        defectIds: [],
+        lastExecutionStatus: 'untested',
+      };
+    });
   }
-  dispatchPayment();
-};`,
-    requirementId: 'REQ-ECOM-03',
-    assignedTo: 'Sarah Jenkins (Frontend)',
-    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-  },
-  {
-    id: 'DEF-112',
-    testId: 'ECOM-001',
-    testTitle: 'Storefront item add to cart and cart counter increment',
-    category: 'TEST_SCRIPT_ISSUE',
-    classification: 'flaky_test',
-    status: 'new',
-    confidence: 79,
-    severity: 'minor',
-    rootCauseAnalysis: 'Timing race condition between React synthetic event handler hydration and Playwright fast click action. The selector is correct but lacks explicit actionability wait.',
-    failedStep: {
-      action: 'click',
-      target: '[data-testid="add-to-cart-item-1"]',
-      description: 'Click Add to Cart button',
-      timeoutMs: 3000,
-    },
-    actualBehavior: 'Element intercepted by floating cookie consent banner on mobile viewport (375x667).',
-    expectedBehavior: 'Button click should register and increment cart badge to "Items: 1".',
-    suggestedFix: 'Add dismissCookieBanner() precondition or use page.locator().scrollIntoViewIfNeeded() before clicking.',
-    codeSnippet: `// In tests/ecom.spec.ts:
-await page.locator('[data-testid="add-to-cart-item-1"]').scrollIntoViewIfNeeded();
-await page.locator('[data-testid="add-to-cart-item-1"]').click({ trial: false });`,
-    requirementId: 'REQ-ECOM-01',
-    assignedTo: 'Devin Scott (QA Automation)',
-    createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
-  },
-  {
-    id: 'DEF-115',
-    testId: 'AUTH-004',
-    testTitle: 'OAuth 2.0 PKCE Session Token Refresh on 401 Expiry',
-    category: 'ENVIRONMENT_ISSUE',
-    classification: 'environment_issue',
-    status: 'fixed',
-    confidence: 94,
-    severity: 'major',
-    rootCauseAnalysis: 'Mock server CORS header Access-Control-Allow-Origin was missing on /oauth/token staging endpoint during automated pipeline run.',
-    failedStep: {
-      action: 'assert_value',
-      target: '[data-testid="auth-token-state"]',
-      value: 'active_refreshed',
-      description: 'Check refreshed token presence',
-    },
-    actualBehavior: 'Browser received CORS preflight 403 Forbidden response.',
-    expectedBehavior: 'Staging proxy should return 200 OK with refreshed bearer token.',
-    suggestedFix: 'Ensure CORS middleware in staging mock gateway permits localhost:3000 and automated runner origins.',
-    codeSnippet: `// In staging-proxy.js:
-app.use(cors({
-  origin: [/^https?:\\/\\/localhost(:[0-9]+)?$/, /\\.run\\.app$/],
-  credentials: true
-}));`,
-    requirementId: 'REQ-AUTH-02',
-    assignedTo: 'Ops Team (Infra)',
-    createdAt: new Date(Date.now() - 3600000 * 72).toISOString(),
-  },
-];
 
-export const INITIAL_TRACEABILITY_REQUIREMENTS: TraceabilityRequirement[] = [
-  {
-    id: 'req-1',
-    code: 'REQ-ECOM-01',
-    title: 'Storefront Product Quick Add & Cart State Synchronization',
-    description: 'When a shopper clicks "Add to Cart" on any catalog item, the shopping cart drawer badge must immediately reflect the updated quantity and persist in session storage.',
-    module: 'Storefront & Catalog',
-    priority: 'critical',
-    status: 'covered',
-    testCaseIds: ['ECOM-001'],
-    defectIds: ['DEF-112'],
-    lastExecutionStatus: 'passed',
-  },
-  {
-    id: 'req-2',
-    code: 'REQ-ECOM-02',
-    title: 'Promotional Coupon Validation and Percentage Calculation',
-    description: 'The cart drawer must accept valid discount promo codes (e.g. SAVE50) and subtract the correct percentage from the subtotal before calculating taxes and shipping fees.',
-    module: 'Cart & Promotions',
-    priority: 'critical',
-    status: 'covered',
-    testCaseIds: ['ECOM-002'],
-    defectIds: ['DEF-104'],
-    lastExecutionStatus: 'failed',
-  },
-  {
-    id: 'req-3',
-    code: 'REQ-ECOM-03',
-    title: 'Checkout Form Mandatory Field & Email Regex Enforcement',
-    description: 'The checkout form must block submission and visually flag invalid or empty customer name and email addresses with accessible ARIA invalid alerts.',
-    module: 'Checkout & Payments',
-    priority: 'high',
-    status: 'covered',
-    testCaseIds: ['ECOM-003'],
-    defectIds: ['DEF-108'],
-    lastExecutionStatus: 'passed',
-  },
-  {
-    id: 'req-4',
-    code: 'REQ-ECOM-04',
-    title: 'Inventory Stock Reservation During 10-Minute Checkout Window',
-    description: 'When a user enters the payment step, items in the cart must be tentatively reserved for 10 minutes to prevent overbooking and stock race conditions.',
-    module: 'Inventory Engine',
-    priority: 'high',
-    status: 'uncovered',
-    testCaseIds: [],
-    defectIds: [],
-    lastExecutionStatus: 'untested',
-  },
-  {
-    id: 'req-5',
-    code: 'REQ-ECOM-05',
-    title: 'Guest Checkout vs Authenticated Session Recovery',
-    description: 'If a shopper starts checkout as a guest and logs in mid-flow, their pending cart items must merge seamlessly without losing entered shipping details.',
-    module: 'Authentication & Session',
-    priority: 'medium',
-    status: 'partial',
-    testCaseIds: ['AUTH-004'],
-    defectIds: ['DEF-115'],
-    lastExecutionStatus: 'passed',
-  },
-  {
-    id: 'req-6',
-    code: 'REQ-ECOM-06',
-    title: 'Webhook Event Idempotency on Payment Gateway Authorization',
-    description: 'Charge authorization webhook callbacks from payment processors must be strictly idempotent to prevent duplicate order generation on network retry.',
-    module: 'Payment Webhooks',
-    priority: 'critical',
-    status: 'uncovered',
-    testCaseIds: [],
-    defectIds: [],
-    lastExecutionStatus: 'untested',
-  },
-  {
-    id: 'req-7',
-    code: 'REQ-ECOM-07',
-    title: 'Accessible Screen Reader Support for Checkout Error Summary',
-    description: 'Form submission errors must be announced to assistive screen readers via an aria-live="polite" container with focus set to the first invalid field.',
-    module: 'Accessibility & a11y',
-    priority: 'medium',
-    status: 'partial',
-    testCaseIds: ['ECOM-003'],
-    defectIds: [],
-    lastExecutionStatus: 'passed',
-  },
-];
+  if (analysis.routes && analysis.routes.length > 0) {
+    return analysis.routes.map((r, idx) => {
+      const code = `REQ-RT-${(idx + 1).toString().padStart(3, '0')}`;
+      const matchingTests = testCases.filter(
+        (tc) =>
+          (tc.module && tc.module.toLowerCase().includes(r.name.toLowerCase())) ||
+          tc.title.toLowerCase().includes(r.name.toLowerCase())
+      );
+      return {
+        id: `req-rt-${idx + 1}`,
+        code,
+        title: `${r.name} Flow`,
+        description: r.description,
+        module: r.name,
+        priority: r.criticality === 'critical' ? 'critical' : r.criticality === 'high' ? 'high' : 'medium',
+        status: matchingTests.length > 0 ? 'covered' : 'uncovered',
+        testCaseIds: matchingTests.map((t) => t.test_id),
+        defectIds: [],
+        lastExecutionStatus: 'untested',
+      };
+    });
+  }
+
+  return [];
+}

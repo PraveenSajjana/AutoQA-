@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { TestCase, TestRun, TestResult, StepExecutionRecord, DefectTriage, TriageCategory } from '../types/qa';
-import { SAMPLE_APPS } from '../services/sampleApps';
 import { 
   Play, 
   Pause, 

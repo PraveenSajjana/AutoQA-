@@ -12,7 +12,9 @@ import {
   Check, 
   Play, 
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Terminal,
+  FolderOpen
 } from 'lucide-react';
 
 interface ProjectsViewProps {
@@ -50,6 +52,18 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-[#FBBF24]/15 text-[#FBBF24] border border-[#FBBF24]/30">
             <FolderGit2 className="w-3 h-3" /> Git Repo
+          </span>
+        );
+      case 'workspace_scan':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-[#22D3EE]/15 text-[#22D3EE] border border-[#22D3EE]/30">
+            <Terminal className="w-3 h-3" /> Workspace Codebase
+          </span>
+        );
+      case 'local_folder':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-[#9278FF]/15 text-[#9278FF] border border-[#9278FF]/30">
+            <FolderOpen className="w-3 h-3" /> Local Folder
           </span>
         );
       case 'pasted_code':
@@ -95,19 +109,40 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         </button>
       </div>
 
-      {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {projects.map((project) => {
-          const isActive = project.id === currentProject.id;
-          return (
-            <div
-              key={project.id}
-              className={`p-5 rounded-2xl border transition flex flex-col justify-between ${
-                isActive
-                  ? 'bg-[#172238] border-[#7C5CFC] ring-1 ring-[#7C5CFC]/40 shadow-lg shadow-[#7C5CFC]/10'
-                  : 'bg-[#111A2E] border-[#26334D] hover:border-[#7C5CFC]/50 hover:bg-[#172238]/40'
-              }`}
-            >
+      {/* Projects Grid or Empty State */}
+      {projects.length === 0 ? (
+        <div className="p-12 rounded-2xl bg-[#111A2E] border border-[#26334D] text-center space-y-4 max-w-xl mx-auto my-8">
+          <div className="w-14 h-14 rounded-2xl bg-[#7C5CFC]/15 border border-[#7C5CFC]/30 text-[#7C5CFC] flex items-center justify-center mx-auto">
+            <Terminal className="w-7 h-7 text-[#22D3EE]" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-base font-bold text-[#F1F5F9]">No Applications Registered Yet</h3>
+            <p className="text-xs text-[#94A3B8] leading-relaxed">
+              QA-Agent discovers modules and synthesizes Playwright test cases directly from your code. Add an application by analyzing your active workspace, uploading a ZIP file, linking a local folder, connecting a Git repo, or testing a web URL.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onNewProject}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#7C5CFC] hover:bg-[#9278FF] text-white rounded-xl text-xs font-bold shadow-lg shadow-[#7C5CFC]/30 transition"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Project via Code Analysis</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {projects.map((project) => {
+            const isActive = project.id === currentProject.id;
+            return (
+              <div
+                key={project.id}
+                className={`p-5 rounded-2xl border transition flex flex-col justify-between ${
+                  isActive
+                    ? 'bg-[#172238] border-[#7C5CFC] ring-1 ring-[#7C5CFC]/40 shadow-lg shadow-[#7C5CFC]/10'
+                    : 'bg-[#111A2E] border-[#26334D] hover:border-[#7C5CFC]/50 hover:bg-[#172238]/40'
+                }`}
+              >
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   {getInputTypeBadge(project.inputType)}
@@ -184,6 +219,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           );
         })}
       </div>
+      )}
     </div>
   );
 };

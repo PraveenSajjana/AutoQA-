@@ -3,7 +3,8 @@
  * Strictly conforms to the JSON test case specification and 5-agent architecture.
  */
 
-export type ProjectInputType = 'website_url' | 'git_repo' | 'local_folder' | 'spec_upload' | 'sandbox_app' | 'pasted_code' | 'zip_upload';
+export type ProjectInputType = 'website_url' | 'git_repo' | 'local_folder' | 'spec_upload' | 'sandbox_app' | 'pasted_code' | 'zip_upload' | 'workspace_scan';
+
 
 export interface PastedSourceFile {
   id: string;
@@ -36,6 +37,22 @@ export interface Project {
   sampleAppId?: string;
 }
 
+export interface DiscoveredFeature {
+  id: string; // e.g. FEAT-001
+  name: string;
+  description: string;
+  sourceFilePaths: string[];
+  relevantRoutesOrEndpoints: string[];
+  relatedComponents: string[];
+  dependencies: string[];
+  riskLevel: 'critical' | 'high' | 'medium' | 'low';
+  riskRationale: string;
+  confidenceLevel: 'high' | 'medium' | 'low';
+  evidence: string;
+  analysisLimitations: string;
+  confirmed: boolean; // toggle to include or exclude from test generation
+}
+
 export interface RouteMetadata {
   path: string;
   name: string;
@@ -48,6 +65,7 @@ export interface RouteMetadata {
     purpose: string;
   }[];
   potentialRisks: string[];
+  featureId?: string;
 }
 
 export interface ApplicationAnalysis {
@@ -56,6 +74,12 @@ export interface ApplicationAnalysis {
   version: string;
   summary: string;
   techStackDetected: string[];
+  entryPoints?: string[];
+  sourceRevision?: string; // Git commit SHA, branch, or folder path
+  discoveredFeatures?: DiscoveredFeature[];
+  apiEndpoints?: string[];
+  databaseModels?: string[];
+  existingTestTooling?: string[];
   routes: RouteMetadata[];
   boundaryScenarios: string[];
   recommendedTestSuites: {
@@ -64,6 +88,7 @@ export interface ApplicationAnalysis {
     estimatedCases: number;
     priority: 'smoke' | 'critical-path' | 'regression' | 'edge-cases' | 'functional' | 'boundary' | 'negative';
   }[];
+  limitations?: string[];
   generatedAt: string;
 }
 
@@ -113,15 +138,23 @@ export type TestCaseStatus = 'pending_review' | 'approved' | 'rejected' | 'draft
 export interface TestCase {
   test_id: string;
   requirement_id: string;
+  feature_id?: string;
   title: string;
+  objective?: string;
   module?: string;
   priority: TestPriority;
+  category?: 'smoke' | 'functional' | 'boundary' | 'negative' | 'regression' | 'critical-path' | 'edge-cases';
+  test_type?: 'positive' | 'negative' | 'boundary' | 'security' | 'regression' | 'accessibility' | 'contract';
+  traceability?: string;
+  evidence?: string;
+  confidence?: 'high' | 'medium' | 'experimental';
   preconditions: string[];
+  test_data?: string | Record<string, any>;
   steps: TestStep[];
   expected_result: string;
   status: TestCaseStatus;
-  category?: 'smoke' | 'functional' | 'boundary' | 'negative' | 'regression' | 'critical-path' | 'edge-cases';
   automation_feasibility?: 'automated_playwright' | 'manual_verification_required' | 'api_mock_required';
+  execution_compatibility?: 'playwright_web' | 'api_mock' | 'manual_verification';
   uncertainAssumptions?: string[];
   reviewNotes?: string;
 }

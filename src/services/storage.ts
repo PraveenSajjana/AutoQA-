@@ -6,8 +6,6 @@ import {
   TestRun, 
   QASummaryReport 
 } from '../types/qa';
-import { SAMPLE_APPS } from './sampleApps';
-
 export interface ProjectSessionData {
   projectId: string;
   analysis: ApplicationAnalysis | null;
@@ -27,40 +25,45 @@ const STORAGE_KEYS = {
 };
 
 /**
- * Gets the initial default projects list from SAMPLE_APPS.
+ * Gets the initial default projects list.
+ * Hardcoded projects are removed — projects are now created by analyzing user-supplied code.
  */
 export function getDefaultProjects(): Project[] {
-  return SAMPLE_APPS.map((sa) => ({
-    id: sa.id,
-    name: sa.name,
-    inputType: 'sandbox_app',
-    targetUrl: sa.url,
-    createdAt: new Date().toISOString(),
-    status: 'tests_generated',
-    sampleAppId: sa.id,
-  }));
+  return [];
 }
 
 /**
  * Load all stored projects from localStorage.
- * Falls back to default sample projects if none are stored.
+ * Automatically filters out any legacy hardcoded samples.
  */
 export function loadStoredProjects(): Project[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.PROJECTS);
     if (!raw) {
-      const defaults = getDefaultProjects();
-      saveStoredProjects(defaults);
-      return defaults;
+      return [];
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
+      // Filter out any legacy hardcoded samples from previous sessions
+      const dynamicProjects = parsed.filter((p) => {
+        if (!p || typeof p !== 'object') return false;
+        if (p.sampleAppId) return false;
+        const idLower = (p.id || '').toLowerCase();
+        if (idLower.includes('novashop') || idLower.includes('flipkart') || idLower.includes('observe') || idLower.includes('fintech') || idLower.includes('healthcare')) {
+          return false;
+        }
+        return true;
+      });
+
+      if (dynamicProjects.length !== parsed.length) {
+        saveStoredProjects(dynamicProjects);
+      }
+      return dynamicProjects;
     }
   } catch (err) {
     console.warn('Could not load projects from localStorage:', err);
   }
-  return getDefaultProjects();
+  return [];
 }
 
 /**
@@ -107,49 +110,6 @@ export function loadProjectSession(projectId: string): ProjectSessionData | null
     }
   } catch (err) {
     console.warn(`Could not load session for project ${projectId}:`, err);
-  }
-
-  // If this is a sample project without a saved session, provide the sample defaults
-  const sample = SAMPLE_APPS.find((s) => s.id === projectId);
-  if (sample) {
-    const defaultFeedback: Record<string, TestReviewFeedback> = {
-      'ECOM-001': {
-        testId: 'ECOM-001',
-        verdict: 'approved',
-        score: 98,
-        notes: ['Valid full purchase journey', 'Deterministic assertions in place', 'Low selector drift probability'],
-        selectorStabilityScore: 'high',
-        assertionRigor: 'strong',
-      },
-      'ECOM-002': {
-        testId: 'ECOM-002',
-        verdict: 'approved',
-        score: 94,
-        notes: ['Financial discount math verified', 'Coupon input target exists in DOM'],
-        selectorStabilityScore: 'high',
-        assertionRigor: 'strong',
-      },
-      'ECOM-003': {
-        testId: 'ECOM-003',
-        verdict: 'approved',
-        score: 92,
-        notes: ['Negative validation barrier covered', 'Protects against empty payload submissions'],
-        selectorStabilityScore: 'high',
-        assertionRigor: 'strong',
-      },
-    };
-
-    return {
-      projectId,
-      analysis: sample.analysis,
-      testCases: sample.seededTestCases,
-      reviewFeedbacks: defaultFeedback,
-      currentRun: null,
-      summaryReport: null,
-      currentStage: 3,
-      completedStages: [1, 2, 3],
-      updatedAt: new Date().toISOString(),
-    };
   }
 
   return null;

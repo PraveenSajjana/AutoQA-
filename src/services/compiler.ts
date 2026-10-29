@@ -25,8 +25,21 @@ export function compileToPlaywrightTS(testCases: TestCase[], baseUrl = 'http://l
   for (const tc of testCases) {
     codeLines.push(`  /**`);
     codeLines.push(`   * Test ID: ${tc.test_id}`);
-    codeLines.push(`   * Requirement: ${tc.requirement_id}`);
+    if (tc.feature_id) {
+      codeLines.push(`   * Feature ID: ${tc.feature_id}`);
+    }
+    if (tc.objective) {
+      codeLines.push(`   * Objective: ${tc.objective}`);
+    }
+    codeLines.push(`   * Type: ${(tc.test_type || tc.category || 'functional').toUpperCase()}`);
+    codeLines.push(`   * Requirement: ${tc.requirement_id || 'N/A'}`);
+    if (tc.traceability) {
+      codeLines.push(`   * Traceability: ${tc.traceability}`);
+    }
     codeLines.push(`   * Priority: ${tc.priority.toUpperCase()}`);
+    if (tc.confidence) {
+      codeLines.push(`   * Discovery Confidence: ${tc.confidence}%`);
+    }
     if (tc.preconditions.length > 0) {
       codeLines.push(`   * Preconditions: ${tc.preconditions.join('; ')}`);
     }
@@ -156,8 +169,12 @@ function escapeXml(unsafe: string): string {
 export function compileToCSV(testCases: TestCase[], run?: TestRun): string {
   const headers = [
     'Test ID',
+    'Feature ID',
+    'Test Type',
     'Requirement ID',
     'Title',
+    'Objective',
+    'Traceability',
     'Priority',
     'Status',
     'Execution Result',
@@ -180,8 +197,12 @@ export function compileToCSV(testCases: TestCase[], run?: TestRun): string {
 
     const values = [
       tc.test_id,
-      tc.requirement_id,
+      tc.feature_id || 'N/A',
+      tc.test_type || tc.category || 'functional',
+      tc.requirement_id || 'N/A',
       tc.title,
+      tc.objective || 'N/A',
+      tc.traceability || 'N/A',
       tc.priority,
       tc.status,
       execStatus,

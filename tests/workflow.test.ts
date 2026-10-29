@@ -193,3 +193,17 @@ test('6. Flipkart E-Commerce Journey - validates mobile 8722451115 login & iPhon
   assert.equal(priceAssertionStep?.value, '₹1,59,900');
 });
 
+test('7. Workspace Scanner - inspects active repository files, discovers AST routes, and detects tech stack', async () => {
+  const { scanWorkspaceDirectory } = await import('../server.ts');
+  const scanResult = scanWorkspaceDirectory(process.cwd(), 80);
+
+  assert.ok(scanResult, 'Scan result must not be null');
+  assert.ok(scanResult.filesCount > 0, 'Must discover files in active workspace');
+  assert.ok(scanResult.totalLines > 0, 'Total lines must be greater than zero');
+  assert.ok(scanResult.techStack.length > 0, 'Must detect at least one technology in stack');
+  assert.ok(scanResult.techStack.includes('React'), 'Must detect React in dependencies');
+  assert.ok(scanResult.techStack.includes('TypeScript'), 'Must detect TypeScript');
+  assert.ok(scanResult.routes.length > 0, 'Must discover functional routes and UI modules');
+  assert.ok(scanResult.serverEndpoints.length > 0, 'Must discover server API endpoints');
+});
+

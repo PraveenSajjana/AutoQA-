@@ -265,10 +265,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
                 <div className="min-w-0">
                   <div className="text-xs font-semibold text-[#F1F5F9] truncate">Enterprise QA Squad</div>
-                  <div className="text-[10px] text-[#64748B] truncate font-mono">Local Protected Mode</div>
+                  <div className="text-[10px] text-[#22D3EE] truncate font-mono">Repo: /app/applet</div>
                 </div>
               </div>
-              <span className="w-2 h-2 rounded-full bg-[#22C55E]" title="Local Persistence Active" />
+              <span className="w-2 h-2 rounded-full bg-[#22C55E]" title="Repository Access & Local Persistence Active" />
             </div>
           ) : (
             <div className="w-7 h-7 mx-auto rounded-full bg-gradient-to-tr from-[#7C5CFC] to-[#22D3EE] flex items-center justify-center text-white text-[11px] font-bold font-mono">

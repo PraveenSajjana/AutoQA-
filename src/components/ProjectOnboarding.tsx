@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { Project, ProjectInputType, PastedSourceFile } from '../types/qa';
-import { SAMPLE_APPS } from '../services/sampleApps';
 import { generateBRDPDF } from '../services/pdfGenerator';
 import { CodePastingWorkspace, SAMPLE_CODE_PRESETS } from './CodePastingWorkspace';
 import { extractFilesFromZip, createSampleZipFile } from '../services/zipExtractor';
@@ -128,18 +127,17 @@ export const LoginForm: React.FC = () => {
   const [targetUrl, setTargetUrl] = useState('https://example.com');
   const [repoUrl, setRepoUrl] = useState('https://github.com/my-org/web-app');
   const [specDocument, setSpecDocument] = useState(
-`# User Story: User Checkout & Promo Code
-As a registered customer
-I want to add items to my cart and apply a discount code
-So that I can verify the discounted total before payment
+`# User Story: Primary User Workflow
+As a user
+I want to navigate through core functional flows and submit inputs
+So that I can complete primary tasks with verified validation
 
 Acceptance Criteria:
-1. Adding item increments the cart badge counter.
-2. Promo code "SAVE20" reduces the cart total by 20%.
-3. Clicking Proceed to Checkout opens the billing form.
-4. Name and valid email are required for checkout submission.`
+1. Primary navigation renders required interactive controls.
+2. Form fields validate required formats and display clear inline feedback.
+3. Submitting verified input successfully executes the target action.
+4. System preserves user session state across interactive steps.`
   );
-  const [selectedSampleAppId, setSelectedSampleAppId] = useState('novashop-ecom');
   const [isDownloadingBrdPdf, setIsDownloadingBrdPdf] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -458,17 +456,6 @@ Acceptance Criteria:
       return;
     }
 
-    if (selectedTab === 'sandbox_app') {
-      const sample = SAMPLE_APPS.find((s) => s.id === selectedSampleAppId) || SAMPLE_APPS[0];
-      onStartAnalysis({
-        name: sample.name,
-        inputType: 'sandbox_app',
-        targetUrl: sample.url,
-        sampleAppId: sample.id,
-      });
-      return;
-    }
-
     if (selectedTab === 'website_url') {
       onStartAnalysis({
         name: projectName || new URL(targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`).hostname,
@@ -510,78 +497,6 @@ Acceptance Criteria:
         <p className="text-slate-400 text-sm mt-2 max-w-xl mx-auto leading-relaxed">
           The easiest way to generate and run Playwright tests for your web application. Paste code, upload a ZIP, or test a live website.
         </p>
-      </div>
-
-      {/* Systematic 1-Click Demo Launcher Card (Great for first-time / non-technical users) */}
-      <div className="p-5 rounded-2xl bg-gradient-to-r from-indigo-950/40 via-slate-900 to-slate-900 border border-indigo-500/30 shadow-lg space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider">
-                Instant 1-Click Demos (No Files Required)
-              </h2>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Want to see AutoQA in action immediately? Launch a pre-configured sample application with pre-computed test cases:
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-          <button
-            type="button"
-            onClick={() => {
-              const observe = SAMPLE_APPS.find((s) => s.id === 'observe-speech-qa') || SAMPLE_APPS[0];
-              onStartAnalysis({
-                name: observe.name,
-                inputType: 'sandbox_app',
-                targetUrl: observe.url,
-                sampleAppId: observe.id,
-              });
-            }}
-            className="p-3.5 rounded-xl bg-slate-950 border border-indigo-500/30 hover:border-indigo-400 text-left transition group hover:bg-indigo-950/20 flex items-start gap-3"
-          >
-            <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-              <Code2 className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-white group-hover:text-indigo-300 transition flex items-center gap-1.5">
-                <span>Observe.ai Platform</span>
-                <span className="text-[10px] text-amber-400 font-mono">Popular</span>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-0.5 truncate">
-                Call transcript viewer, sentiment filters &amp; QA scorecard
-              </p>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              const nova = SAMPLE_APPS.find((s) => s.id === 'novashop-ecom') || SAMPLE_APPS[0];
-              onStartAnalysis({
-                name: nova.name,
-                inputType: 'sandbox_app',
-                targetUrl: nova.url,
-                sampleAppId: nova.id,
-              });
-            }}
-            className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-emerald-500/40 text-left transition group hover:bg-emerald-950/10 flex items-start gap-3"
-          >
-            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-              <Globe className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-white group-hover:text-emerald-300 transition">
-                NovaShop E-Commerce
-              </div>
-              <p className="text-[11px] text-slate-400 mt-0.5 truncate">
-                Cart discount calculation, promo code SAVE20 &amp; checkout
-              </p>
-            </div>
-          </button>
-        </div>
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
@@ -671,18 +586,7 @@ Acceptance Criteria:
               <HardDrive className="w-3 h-3 text-cyan-400" />
               <span>Local Device Folder</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setSelectedTab('sandbox_app')}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center gap-1.5 ${
-                selectedTab === 'sandbox_app'
-                  ? 'bg-slate-800 text-white border border-slate-700'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Sparkles className="w-3 h-3 text-indigo-400" />
-              <span>Demo Sandbox</span>
-            </button>
+
             <button
               type="button"
               onClick={() => setSelectedTab('spec_upload')}
@@ -1154,52 +1058,6 @@ Acceptance Criteria:
                 <pre className="text-cyan-300 font-mono text-[11px] overflow-x-auto select-all">
                   npx autoqa-agent link {localFolderPath || '.'} --port {localDevUrl.split(':').pop() || '3000'}
                 </pre>
-              </div>
-            </div>
-          )}
-
-          {/* Option: Sandbox Apps */}
-          {selectedTab === 'sandbox_app' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  Select Pre-Configured Live Target Application
-                </label>
-                <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
-                  <CheckCircle className="w-3.5 h-3.5" /> Instant Zero-Setup Execution
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {SAMPLE_APPS.map((app) => {
-                  const isSelected = selectedSampleAppId === app.id;
-                  return (
-                    <div
-                      key={app.id}
-                      onClick={() => setSelectedSampleAppId(app.id)}
-                      className={`p-4 rounded-xl border text-left cursor-pointer transition relative ${
-                        isSelected
-                          ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/30'
-                          : 'border-slate-800 bg-slate-850 hover:border-slate-700 hover:bg-slate-800'
-                      }`}
-                    >
-                      <div className="text-[11px] font-medium text-indigo-400 mb-1">{app.category}</div>
-                      <div className="text-sm font-bold text-white mb-1.5">{app.name}</div>
-                      <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{app.description}</p>
-                      <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                        <span>{app.seededTestCases.length} Test Cases</span>
-                        <span className="text-indigo-400">Ready &rarr;</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-800 flex items-start gap-2.5 text-xs text-slate-400">
-                <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <div>
-                  Includes realistic DOM components with toggleable defect flags so you can observe the Playwright execution engine and AI Failure Triage in real time!
-                </div>
               </div>
             </div>
           )}

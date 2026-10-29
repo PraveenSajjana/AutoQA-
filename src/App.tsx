@@ -15,8 +15,7 @@ import {
   DefectStatus,
   DefectClassification
 } from './types/qa';
-import { SAMPLE_APPS } from './services/sampleApps';
-import { INITIAL_DEFECTS, INITIAL_TRACEABILITY_REQUIREMENTS } from './services/defectAndTraceabilityData';
+import { INITIAL_DEFECTS, INITIAL_TRACEABILITY_REQUIREMENTS, createRequirementsFromAnalysis } from './services/defectAndTraceabilityData';
 import { Sidebar } from './components/Sidebar';
 import { TopNav } from './components/TopNav';
 import { DashboardOverview } from './components/DashboardOverview';
@@ -50,6 +49,14 @@ import {
   syncProjectToBackend
 } from './services/storage';
 import { Eye, EyeOff, X } from 'lucide-react';
+
+const DEFAULT_EMPTY_PROJECT: Project = {
+  id: 'new-target-project',
+  name: 'New Application',
+  inputType: 'workspace_scan',
+  createdAt: new Date().toISOString(),
+  status: 'draft',
+};
 
 export default function App() {
   // Navigation Section State (default to 'workflow' for end-to-end journey)
@@ -88,52 +95,27 @@ export default function App() {
     });
   };
 
-  // Projects state
+  // Projects state (only loaded from dynamic analysis, zero hardcoded projects)
   const [projects, setProjects] = useState<Project[]>(() => loadStoredProjects());
   const [currentProject, setCurrentProject] = useState<Project>(() => {
     const storedList = loadStoredProjects();
     const activeId = loadActiveProjectId();
     const matched = storedList.find((p) => p.id === activeId);
-    return matched || storedList[0] || getDefaultProjects()[0];
+    return matched || storedList[0] || DEFAULT_EMPTY_PROJECT;
   });
 
   // Session data for current project
-  const initialSession = loadProjectSession(currentProject.id);
+  const initialSession = currentProject?.id ? loadProjectSession(currentProject.id) : null;
 
   // QA Data state
   const [analysis, setAnalysis] = useState<ApplicationAnalysis | null>(
-    initialSession?.analysis ?? (SAMPLE_APPS[0].analysis)
+    initialSession?.analysis ?? null
   );
   const [testCases, setTestCases] = useState<TestCase[]>(
-    initialSession?.testCases ?? (SAMPLE_APPS[0].seededTestCases)
+    initialSession?.testCases ?? []
   );
   const [reviewFeedbacks, setReviewFeedbacks] = useState<Record<string, TestReviewFeedback>>(
-    initialSession?.reviewFeedbacks ?? {
-      'ECOM-001': {
-        testId: 'ECOM-001',
-        verdict: 'approved',
-        score: 98,
-        notes: ['Valid full purchase journey', 'Deterministic assertions in place', 'Low selector drift probability'],
-        selectorStabilityScore: 'high',
-        assertionRigor: 'strong',
-      },
-      'ECOM-002': {
-        testId: 'ECOM-002',
-        verdict: 'approved',
-        score: 94,
-        notes: ['Financial discount math verified', 'Coupon input target exists in DOM'],
-        selectorStabilityScore: 'high',
-        assertionRigor: 'strong',
-      },
-      'ECOM-003': {
-        testId: 'ECOM-003',
-        verdict: 'approved',
-        score: 92,
-        notes: ['Negative validation barrier covered', 'Protects against empty payload submissions'],
-        selectorStabilityScore: 'high',
-        assertionRigor: 'strong',
-      },
-    }
+    initialSession?.reviewFeedbacks ?? {}
   );
 
   const [currentRun, setCurrentRun] = useState<TestRun | null>(initialSession?.currentRun ?? null);
@@ -168,28 +150,19 @@ export default function App() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
       id: 'notif-1',
-      type: 'warning',
-      title: 'Defect Flagged: DEF-104',
-      message: 'Cart total promo discount assertion mismatch in NovaShop.',
-      timestamp: '10m ago',
+      type: 'info',
+      title: 'Dynamic Code Analyzer Ready',
+      message: 'Analyze any repository, local workspace, ZIP archive, or web application to generate Playwright tests.',
+      timestamp: 'Just now',
       read: false,
-      linkSection: 'defects',
+      linkSection: 'workflow',
     },
     {
       id: 'notif-2',
-      type: 'info',
-      title: 'Coverage Gap Detected',
-      message: 'REQ-ECOM-04 (Inventory Reservation) has no linked automated test cases.',
-      timestamp: '25m ago',
-      read: false,
-      linkSection: 'requirements',
-    },
-    {
-      id: 'notif-3',
       type: 'success',
       title: 'Playwright Sandbox Active',
       message: 'Headless Chromium instance running with DOM actionability checks.',
-      timestamp: '1h ago',
+      timestamp: '10m ago',
       read: true,
       linkSection: 'workflow',
     },
@@ -364,58 +337,25 @@ export default function App() {
       setWorkflowStep(session.currentRun ? 'execution' : session.testCases?.length ? 'test_cases' : 'analysis');
       addToast('success', 'Project Reopened', `${project.name} loaded with ${session.testCases?.length || 0} tests`);
     } else {
-      const sample = SAMPLE_APPS.find((s) => s.id === project.sampleAppId);
-      if (sample) {
-        setAnalysis(sample.analysis);
-        setTestCases(sample.seededTestCases);
-        setWorkflowStep('analysis');
-        addToast('success', 'Target Project Loaded', `${project.name} (${sample.seededTestCases.length} tests ready)`);
-      } else {
-        setAnalysis(null);
-        setTestCases([]);
-        setReviewFeedbacks({});
-        setCurrentRun(null);
-        setSummaryReport(null);
-        setWorkflowStep('new_project');
-        addToast('info', 'Project Selected', project.name);
-      }
+      setAnalysis(null);
+      setTestCases([]);
+      setReviewFeedbacks({});
+      setCurrentRun(null);
+      setSummaryReport(null);
+      setWorkflowStep('new_project');
+      addToast('info', 'Project Selected', project.name);
     }
   };
 
   // Delete project
   const handleDeleteProject = (projectId: string) => {
     const toDelete = projects.find((p) => p.id === projectId);
-    if (toDelete?.sampleAppId && projects.length <= 1) {
-      addToast('info', 'Sample Protected', 'At least one project must remain in the workspace.');
-      return;
-    }
     const remaining = projects.filter((p) => p.id !== projectId);
     removeProjectFromStorage(projectId);
     setProjects(remaining);
-    const nextProject = remaining[0] || getDefaultProjects()[0];
+    const nextProject = remaining[0] || DEFAULT_EMPTY_PROJECT;
     handleSelectProject(nextProject);
     addToast('success', 'Project Deleted', `Removed ${toDelete?.name || projectId} from workspace.`);
-  };
-
-  // 1-Click sample app loader
-  const handleLoadSample = (sampleId: string) => {
-    const sample = SAMPLE_APPS.find((s) => s.id === sampleId) || SAMPLE_APPS[0];
-    const newProj: Project = {
-      id: `proj-${sample.id}-${Date.now().toString().slice(-4)}`,
-      name: sample.name,
-      inputType: 'website_url',
-      targetUrl: sample.url,
-      createdAt: new Date().toISOString(),
-      status: 'tests_generated',
-      sampleAppId: sample.id,
-    };
-    setProjects((prev) => [newProj, ...prev]);
-    setCurrentProject(newProj);
-    setAnalysis(sample.analysis);
-    setTestCases(sample.seededTestCases);
-    setCurrentSection('workflow');
-    setWorkflowStep('analysis');
-    addToast('success', 'Sample Target Loaded', `${sample.name} loaded with ${sample.seededTestCases.length} tests ready.`);
   };
 
   // Start Analysis from Onboarding (Step 1 -> Step 2)
@@ -437,27 +377,12 @@ export default function App() {
       packageJsonData: projectData.packageJsonData,
       localDevUrl: projectData.localDevUrl,
       specDocument: projectData.specDocument,
-      sampleAppId: projectData.sampleAppId,
       createdAt: new Date().toISOString(),
       status: 'draft',
     };
 
     setProjects((prev) => [newProject, ...prev]);
     setCurrentProject(newProject);
-
-    if (newProject.sampleAppId) {
-      const sample = SAMPLE_APPS.find((s) => s.id === newProject.sampleAppId);
-      if (sample) {
-        setAnalysis(sample.analysis);
-        setTestCases(sample.seededTestCases);
-        setIsAnalyzing(false);
-        setIsOnboardingOpen(false);
-        setCurrentSection('workflow');
-        setWorkflowStep('analysis');
-        addToast('success', 'Project Ready', `${newProject.name} analyzed.`);
-        return;
-      }
-    }
 
     try {
       const res = await fetch('/api/qa/analyze', {
@@ -468,6 +393,7 @@ export default function App() {
       const data = await res.json();
       if (data.success && data.analysis) {
         setAnalysis(data.analysis);
+        setRequirements(createRequirementsFromAnalysis(data.analysis, []));
       }
     } catch (err) {
       console.error('Analysis API error:', err);
@@ -477,6 +403,49 @@ export default function App() {
       setCurrentSection('workflow');
       setWorkflowStep('analysis');
       addToast('success', 'Analysis Complete', 'Identified modules, routes, and risk boundary scenarios.');
+    }
+  };
+
+  // 1-Click Direct Workspace / VS Code Repository Scanner
+  const handleScanWorkspace = async () => {
+    setIsAnalyzing(true);
+    setCurrentSection('workflow');
+    setWorkflowStep('analysis');
+    addToast('info', 'Scanning Workspace Codebase', 'Inspecting /app/applet source files, components, and server routes...');
+
+    try {
+      const res = await fetch('/api/qa/scan-workspace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maxFiles: 100 }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await handleStartAnalysis({
+          name: data.appName || 'AutoQA Studio (Active Workspace)',
+          inputType: 'workspace_scan',
+          localFolderPath: data.workspacePath,
+          localFilesCount: data.filesCount,
+          localFilesList: data.files?.map((f: any) => f.relativePath),
+          detectedFramework: data.techStack?.[0] || 'React 19 + TypeScript',
+          packageJsonData: data.packageJson,
+          codebaseCoverageNotes: `Direct filesystem scan of ${data.workspacePath} (${data.filesCount} files, ${data.totalLines.toLocaleString()} LOC). Discovered ${data.routes?.length || 0} functional modules and ${data.serverEndpoints?.length || 0} server endpoints.`,
+        });
+      } else {
+        await handleStartAnalysis({
+          name: 'AutoQA Studio (Active Workspace)',
+          inputType: 'workspace_scan',
+          localFolderPath: '/app/applet',
+        });
+      }
+    } catch {
+      await handleStartAnalysis({
+        name: 'AutoQA Studio (Active Workspace)',
+        inputType: 'workspace_scan',
+        localFolderPath: '/app/applet',
+      });
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -499,6 +468,9 @@ export default function App() {
           status: idx < 2 ? ('approved' as const) : ('pending_review' as const),
         }));
         setTestCases(casesWithInitialStatus);
+        if (analysis) {
+          setRequirements(createRequirementsFromAnalysis(analysis, casesWithInitialStatus));
+        }
         setWorkflowStep('test_cases');
         addToast('success', 'Test Cases Synthesized', `Generated ${data.testCases.length} Playwright test cases.`);
       }
@@ -582,7 +554,7 @@ export default function App() {
       let testPassed = true;
       let failureTriage: DefectTriage | undefined = undefined;
 
-      const shouldFailThisTest = (defectMode !== 'none') && (tIdx === 1 || (defectMode === 'product_bug' && tc.title.includes('Promo')));
+      const shouldFailThisTest = (defectMode !== 'none') && (tIdx === 1 || (defectMode === 'product_bug' && tIdx === 0));
 
       for (let sIdx = 0; sIdx < tc.steps.length; sIdx++) {
         const step = tc.steps[sIdx];
@@ -594,17 +566,17 @@ export default function App() {
 
         if (stepFails) {
           testPassed = false;
-          let errMsg = 'Expected assertion condition was not met.';
+          let errMsg = `Assertion failed: expected state was not met for '${step.target}'.`;
           let errorContext = `Assertion failure on target '${step.target}'`;
 
           if (defectMode === 'product_bug') {
-            errMsg = `Expected cart total to equal '$119.20' but found '$149.00'. Promo coupon calculation bug.`;
-            errorContext = `Product bug: Cart state did not subtract 20% discount coupon.`;
+            errMsg = `Assertion failed: expected state or return condition was not met for '${step.target}'.`;
+            errorContext = `Product regression: component state failed validation assertion during ${step.action}.`;
           } else if (defectMode === 'flaky_selector') {
-            errMsg = `Target element '[data-testid="${step.target}"]' was not visible in DOM after 5000ms timeout.`;
-            errorContext = `Locator drift: Selector was updated in component markup.`;
+            errMsg = `Target element '${step.target}' was not visible in DOM after 5000ms timeout.`;
+            errorContext = `Locator drift: selector '${step.target}' not located or hidden.`;
           } else if (defectMode === 'network_timeout') {
-            errMsg = `Gateway Timeout 504: API route /api/checkout failed to return 200 within timeout.`;
+            errMsg = `Network 504: API endpoint failed to respond within 5000ms during '${step.action}'.`;
             errorContext = `Environment issue: Cloud gateway proxy timed out.`;
           }
 
@@ -802,20 +774,21 @@ export default function App() {
     addToast('success', 'Test Case Synthesized', `Linked ${newTestId} to ${req.code}`);
   };
 
-  // Reset demo storage
+  // Reset storage and workspace
   const handleResetAllData = () => {
     localStorage.clear();
-    setProjects(getDefaultProjects());
-    const firstProj = getDefaultProjects()[0];
-    setCurrentProject(firstProj);
-    const sample = SAMPLE_APPS.find((s) => s.id === firstProj.sampleAppId) || SAMPLE_APPS[0];
-    setAnalysis(sample.analysis);
-    setTestCases(sample.seededTestCases);
+    setProjects([]);
+    setCurrentProject(DEFAULT_EMPTY_PROJECT);
+    setAnalysis(null);
+    setTestCases([]);
+    setReviewFeedbacks({});
     setCurrentRun(null);
     setSummaryReport(null);
-    setDefects(INITIAL_DEFECTS);
-    setRequirements(INITIAL_TRACEABILITY_REQUIREMENTS);
+    setDefects([]);
+    setRequirements([]);
+    setCurrentSection('workflow');
     setWorkflowStep('new_project');
+    addToast('info', 'Workspace Reset', 'All cached projects, analysis, and test runs cleared.');
   };
 
   const openDefectsCount = defects.filter((d) => d.status !== 'fixed').length;
@@ -856,6 +829,7 @@ export default function App() {
           allProjects={projects}
           onSelectProject={handleSelectProject}
           onNewProject={handleStartNewProjectWorkflow}
+          onScanWorkspace={handleScanWorkspace}
           onOpenSearch={() => setIsSearchOpen(true)}
           onOpenHowItWorks={() => setIsHowItWorksOpen(true)}
           onOpenMobileMenu={() => setMobileMenuOpen(true)}
@@ -888,7 +862,6 @@ export default function App() {
               onProceedToDesign={handleProceedToDesign}
               isGeneratingTests={isGeneratingTests}
               onRunSuite={handleExecuteSuite}
-              onLoadSample={handleLoadSample}
               onOpenPdfModal={() => setIsPdfModalOpen(true)}
             />
           )}
@@ -1161,7 +1134,7 @@ export default function App() {
         onClose={() => setIsHowItWorksOpen(false)}
         onTryDemo={() => {
           setIsHowItWorksOpen(false);
-          handleLoadSample('novashop-ecom');
+          handleScanWorkspace();
         }}
       />
 

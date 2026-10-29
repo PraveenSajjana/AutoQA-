@@ -12,7 +12,8 @@ import {
   ShieldCheck,
   Check,
   X,
-  HelpCircle
+  HelpCircle,
+  Terminal
 } from 'lucide-react';
 
 interface TopNavProps {
@@ -21,6 +22,7 @@ interface TopNavProps {
   allProjects: Project[];
   onSelectProject: (p: Project) => void;
   onNewProject: () => void;
+  onScanWorkspace?: () => void;
   onOpenSearch: () => void;
   onOpenHowItWorks: () => void;
   onOpenMobileMenu: () => void;
@@ -37,6 +39,7 @@ export const TopNav: React.FC<TopNavProps> = ({
   allProjects,
   onSelectProject,
   onNewProject,
+  onScanWorkspace,
   onOpenSearch,
   onOpenHowItWorks,
   onOpenMobileMenu,
@@ -192,6 +195,19 @@ export const TopNav: React.FC<TopNavProps> = ({
 
         {/* Divider */}
         <div className="h-5 w-px bg-[#26334D] hidden sm:block" />
+
+        {/* Scan Workspace Quick CTA */}
+        {onScanWorkspace && (
+          <button
+            type="button"
+            onClick={onScanWorkspace}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#111A2E] hover:bg-[#172238] border border-[#26334D] hover:border-[#22D3EE] text-[#F1F5F9] text-xs font-semibold rounded-lg transition shrink-0"
+            title="Scan active repository codebase (/app/applet)"
+          >
+            <Terminal className="w-3.5 h-3.5 text-[#22D3EE]" />
+            <span className="hidden sm:inline">Scan Workspace</span>
+          </button>
+        )}
 
         {/* Primary "+ New Project" CTA */}
         <button

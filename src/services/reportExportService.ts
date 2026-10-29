@@ -41,6 +41,7 @@ export function downloadHtmlReport(data: ExportReportData, filenamePrefix = 'qa-
     const isPassed = res.status === 'passed';
     const statusColor = isPassed ? '#22C55E' : '#F87171';
     const statusBg = isPassed ? 'rgba(34, 197, 94, 0.1)' : 'rgba(248, 113, 113, 0.1)';
+    const matchingCase = data.testCases.find((tc) => tc.test_id === res.testId);
 
     const stepsHtml = (res.stepRecords || []).map((step, sIdx) => {
       const stepPassed = step.status === 'passed';
@@ -72,12 +73,18 @@ export function downloadHtmlReport(data: ExportReportData, filenamePrefix = 'qa-
 
     return `
       <div style="background:#111A2E; border:1px solid #26334D; border-radius:12px; padding:16px; margin-bottom:16px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
           <div>
-            <span style="font-family:monospace; font-weight:bold; color:#7C5CFC; margin-right:8px;">${res.testId}</span>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+              <span style="font-family:monospace; font-weight:bold; color:#7C5CFC; font-size:13px;">${res.testId}</span>
+              ${matchingCase?.feature_id ? `<span style="font-family:monospace; font-size:11px; color:#9278FF; background:rgba(124,92,252,0.15); border:1px solid rgba(124,92,252,0.3); padding:1px 6px; border-radius:4px;">Feature: ${matchingCase.feature_id}</span>` : ''}
+              ${matchingCase?.test_type ? `<span style="font-size:10px; text-transform:uppercase; color:#22D3EE; background:rgba(34,211,238,0.1); border:1px solid rgba(34,211,238,0.25); padding:1px 6px; border-radius:4px;">${matchingCase.test_type}</span>` : ''}
+            </div>
             <span style="font-weight:600; color:#F1F5F9; font-size:14px;">${escapeHtml(res.testTitle)}</span>
+            ${matchingCase?.objective ? `<div style="color:#94A3B8; font-size:12px; margin-top:4px;">Objective: ${escapeHtml(matchingCase.objective)}</div>` : ''}
+            ${matchingCase?.traceability ? `<div style="color:#64748B; font-family:monospace; font-size:11px; margin-top:2px;">Trace: ${escapeHtml(matchingCase.traceability)}</div>` : ''}
           </div>
-          <div style="display:flex; align-items:center; gap:8px;">
+          <div style="display:flex; align-items:center; gap:8px; shrink-0;">
             <span style="font-size:11px; color:#64748B;">${res.durationMs}ms</span>
             <span style="background:${statusBg}; color:${statusColor}; border:1px solid ${statusColor}; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:bold; text-transform:uppercase;">${res.status}</span>
           </div>
